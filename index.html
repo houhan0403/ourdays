@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="我們的日子">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#fbf6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1c1517" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>我們的日子</title>
+<style>
+:root{
+  --bg:#fff4f6;--bg2:#fdeef7;--card:#ffffff;--ink:#3a2530;--mute:#9a8490;--line:#f6dfe6;
+  --rose:#e0527a;--rose-soft:#ffe3ea;--amber:#d08a1f;--amber-soft:#fff0d2;--plum:#8a5aa6;--shadow:0 6px 18px rgba(224,82,122,.10);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#1c1517;--bg2:#221820;--shadow:none;--card:#2a2024;--ink:#f3e9ec;--mute:#a8969c;--line:#3d2f34;
+  --rose:#e8718e;--rose-soft:#47262f;--amber:#e3ac55;--amber-soft:#43341d;--plum:#d3a9cd;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+html,body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg),var(--bg2)) fixed;color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  font-size:16px;line-height:1.5}
+body{padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 84px)}
+#view{max-width:560px;margin:0 auto}
+h1{font-size:30px;margin:0 0 2px;letter-spacing:.02em;font-family:"Songti TC","Noto Serif TC",serif;font-weight:700}
+h2{font-size:15px;margin:22px 4px 8px;color:var(--ink);font-weight:700;letter-spacing:.04em}
+.sub{color:var(--mute);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:10px}
+.row .grow{flex:1;min-width:0}
+.item{padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0;padding-bottom:0}
+.item:first-child{padding-top:0}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--rose-soft);color:var(--rose);font-weight:600;white-space:nowrap}
+.tag.amber{background:var(--amber-soft);color:var(--amber)}
+.note{color:var(--mute);font-size:14px;white-space:pre-wrap;word-break:break-word}
+.empty{color:var(--mute);font-size:14px;text-align:center;padding:6px 0}
+.empty b{display:block;font-size:30px;font-weight:400;margin-bottom:2px}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+.btn{background:var(--rose);color:#fff;border-radius:99px;padding:11px 16px;font-weight:600;min-height:44px}
+.btn.ghost{background:var(--rose-soft);color:var(--rose)}
+.btn.plain{background:transparent;color:var(--mute);border:1px solid var(--line)}
+.btn.sm{padding:6px 14px;min-height:34px;font-size:14px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btns .btn{flex:1}
+.banner{background:linear-gradient(135deg,#ffb347,#ff7fa3);color:#fff;border-radius:22px;padding:16px;margin:0 0 10px;box-shadow:var(--shadow)}
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#ff8fab,#c58be0);color:#fff;border-radius:26px;padding:20px 20px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.hero .sub{color:#fff;opacity:.9}
+.hero h1{font-size:34px}
+.hero .pair{display:inline-block;margin-top:8px;background:rgba(255,255,255,.25);border-radius:99px;padding:4px 14px;font-size:14px;font-weight:600}
+.hero .deco{position:absolute;right:14px;top:14px;font-size:38px;letter-spacing:-6px;line-height:1}
+.hero .spark{position:absolute;right:22px;bottom:12px;font-size:18px;opacity:.9}
+.title{display:flex;align-items:center;gap:8px}
+.title span{font-size:30px}
+.banner b{display:block;font-size:17px;margin-bottom:2px}
+.banner span{font-size:14px;opacity:.92}
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+  display:flex;padding:6px 8px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
+nav button{flex:1;padding:6px 0;font-size:11px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav{border-radius:24px 24px 0 0;box-shadow:0 -4px 18px rgba(224,82,122,.08)}
+nav .ic{font-size:22px;line-height:1.2;padding:2px 16px;border-radius:99px;filter:grayscale(1);opacity:.55;transition:all .2s}
+nav button.on .ic{filter:none;opacity:1;background:var(--rose-soft);transform:scale(1.08)}
+nav button.on{color:var(--rose);font-weight:600}
+/* calendar */
+.calhead{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}
+.calhead b{font-size:19px}
+.calhead button{width:44px;height:44px;font-size:22px;color:var(--rose)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.wd{font-size:12px;color:var(--mute);padding:4px 0}
+.day{aspect-ratio:1/1.05;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:15px}
+.day.today{box-shadow:inset 0 0 0 1.5px var(--rose)}
+.day.sel{background:var(--rose-soft);color:var(--rose);font-weight:700}
+.dots{display:flex;gap:1px;height:11px}
+.em{font-style:normal;font-size:9px;line-height:11px}
+.dot{width:6px;height:6px;border-radius:50%}
+.d-rec{background:var(--rose)}.d-bk{background:var(--amber)}.d-sp{background:var(--plum)}.d-di{background:var(--mute)}
+.day.sel .dot{background:#fff}
+.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--mute);margin:10px 4px 0}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+/* stats */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:var(--shadow);position:relative}
+.stat .e{position:absolute;right:12px;top:10px;font-size:24px}
+.stat .n{font-size:34px;font-weight:700;line-height:1.1;color:var(--rose);font-variant-numeric:tabular-nums}
+.stat .n small{font-size:14px;color:var(--mute);font-weight:500;margin-left:2px}
+.stat .l{font-size:13px;color:var(--mute)}
+.stat .p{font-size:12px;color:var(--mute);margin-top:4px}
+.chart{display:flex;align-items:flex-end;gap:4px;height:150px;margin-top:8px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--mute)}
+.bar i{display:block;width:100%;background:linear-gradient(180deg,#ff8fab,var(--rose));border-radius:8px 8px 3px 3px;min-height:2px}
+.bar i.zero{background:var(--line)}
+.bar em{font-style:normal;margin-bottom:2px;color:var(--ink);font-variant-numeric:tabular-nums}
+.bar span{margin-top:4px}
+/* forms */
+#mask{position:fixed;inset:0;background:rgba(20,10,14,.45);z-index:10;display:none;align-items:flex-end}
+#mask.on{display:flex}
+#sheet{background:var(--bg);width:100%;max-width:560px;margin:0 auto;border-radius:22px 22px 0 0;
+  padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);max-height:92vh;overflow:auto}
+#sheet h3{margin:0 0 12px;font-size:19px}
+label{display:block;font-size:13px;color:var(--mute);margin:12px 2px 4px}
+input,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:11px 12px;width:100%;min-height:46px;-webkit-appearance:none;appearance:none}
+textarea{min-height:110px;resize:vertical}
+input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;-webkit-appearance:auto;appearance:auto;accent-color:var(--rose)}
+.check{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 96px);transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;white-space:nowrap}
+#toast.on{opacity:1}
+#lock{position:fixed;inset:0;background:var(--bg);z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px}
+#lock.on{display:flex}
+#lock input{max-width:220px;text-align:center;font-size:24px;letter-spacing:.4em}
+.year{font-weight:700;color:var(--plum);font-size:14px;margin-bottom:4px}
+</style>
+</head>
+<body>
+<div id="view"></div>
+
+<nav id="nav">
+  <button data-act="tab" data-v="home"><span class="ic">💗</span>今天</button>
+  <button data-act="tab" data-v="cal"><span class="ic">📅</span>行事曆</button>
+  <button data-act="tab" data-v="stats"><span class="ic">📊</span>統計</button>
+  <button data-act="tab" data-v="set"><span class="ic">⚙️</span>設定</button>
+</nav>
+
+<div id="mask"><div id="sheet"></div></div>
+<div id="toast"></div>
+<div id="lock">
+  <div style="font-size:56px">🌭💞🙊</div>
+  <h1>我們的日子</h1>
+  <div class="sub">請輸入密碼</div>
+  <input id="pinIn" type="password" inputmode="numeric" autocomplete="off">
+  <button class="btn" data-act="unlock">解鎖</button>
+</div>
+
+<script>
+'use strict';
+/* ---------- 資料 ---------- */
+const KEY='ourdays.v1';
+const def=()=>({settings:{a:'老公',b:'老婆',pin:''},records:[],bookings:[],specials:[],diary:{}});
+function load(){
+  try{const j=JSON.parse(localStorage.getItem(KEY));
+    if(j&&Array.isArray(j.records)){const d=def();return Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});}
+  }catch(e){}
+  return def();
+}
+let S=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('儲存失敗，請檢查手機空間');}}
+
+/* ---------- 工具 ---------- */
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const fmt=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);};
+const today=()=>fmt(new Date());
+const WD=['日','一','二','三','四','五','六'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const nice=ds=>{const d=parse(ds);return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 週'+WD[d.getDay()];};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1800);}
+
+const recsOn=ds=>S.records.filter(r=>r.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+const bksOn=ds=>S.bookings.filter(r=>r.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+const spOn=ds=>S.specials.filter(s=>s.yearly?(s.date.slice(5)===ds.slice(5)&&s.date<=ds):s.date===ds);
+const hasDiary=ds=>{const d=S.diary[ds];return !!(d&&((d.a||'').trim()||(d.b||'').trim()));};
+
+/* ---------- 畫面狀態 ---------- */
+let tab='home',sel=today(),calY=new Date().getFullYear(),calM=new Date().getMonth(),statY=new Date().getFullYear();
+
+function render(){
+  const v=$('view');
+  v.innerHTML=tab==='home'?vHome():tab==='cal'?vCal():tab==='stats'?vStats():vSet();
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
+}
+
+/* ---------- 單日內容（今天、行事曆共用） ---------- */
+function dayDetail(ds){
+  const recs=recsOn(ds),bks=bksOn(ds),di=S.diary[ds]||{};
+  let h='';
+  if(bks.length){
+    h+='<h2>💌 預約</h2><div class="card">'+bks.map(b=>
+      '<div class="item"><div class="row"><span class="tag amber">'+esc(b.time||'時間未定')+'</span>'+
+      '<div class="grow note">'+esc(b.note||'兩人時光')+'</div></div>'+
+      '<div class="btns" style="margin-top:8px"><button class="btn sm ghost" data-act="done-bk" data-id="'+b.id+'">✅ 完成，轉為紀錄</button>'+
+      '<button class="btn sm plain" data-act="edit-bk" data-id="'+b.id+'">修改</button></div></div>').join('')+'</div>';
+  }
+  h+='<h2>💗 紀錄</h2><div class="card">';
+  h+=recs.length?recs.map(r=>
+    '<div class="item"><button class="row" style="width:100%;text-align:left" data-act="edit-rec" data-id="'+r.id+'">'+
+    '<span class="tag">'+esc(r.time||'—')+'</span><div class="grow"><b>'+(r.dur?r.dur+' 分鐘':'未記錄時間長度')+'</b>'+
+    (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><span class="sub">›</span></button></div>').join('')
+    :'<div class="empty"><b>🌱</b>這天還沒有紀錄</div>';
+  h+='<div class="btns"><button class="btn" data-act="add-rec" data-d="'+ds+'">💗 新增紀錄</button>'+
+     '<button class="btn ghost" data-act="add-bk" data-d="'+ds+'">💌 預約</button></div></div>';
+  h+='<h2>📖 共同日記</h2><div class="card">';
+  if(hasDiary(ds)){
+    h+=['a','b'].map(k=>(di[k]||'').trim()?'<div class="item"><div class="year">'+esc(S.settings[k])+'</div><div class="note" style="color:var(--ink)">'+esc(di[k])+'</div></div>':'').join('');
+  }else h+='<div class="empty"><b>✏️</b>這天還沒有日記</div>';
+  h+='<div class="btns"><button class="btn ghost" data-act="edit-diary" data-d="'+ds+'">'+(hasDiary(ds)?'✏️ 編輯日記':'✏️ 寫日記')+'</button></div></div>';
+  return h;
+}
+
+/* ---------- 歷年今日 ---------- */
+function onThisDay(ds){
+  const md=ds.slice(5),y0=+ds.slice(0,4),years=new Set();
+  S.records.forEach(r=>{if(r.date.slice(5)===md&&r.date<ds)years.add(+r.date.slice(0,4));});
+  Object.keys(S.diary).forEach(k=>{if(k.slice(5)===md&&k<ds&&hasDiary(k))years.add(+k.slice(0,4));});
+  let h='<h2>🕰️ 歷年今日</h2><div class="card">';
+  const ys=[...years].sort((a,b)=>b-a);
+  if(!ys.length)h+='<div class="empty"><b>🌈</b>往年的這一天還沒有記趣，寫下今天的，明年就看得到了。</div>';
+  else h+=ys.map(y=>{
+    const d=y+'-'+md,recs=recsOn(d),di=S.diary[d]||{};
+    let s='<div class="item"><div class="year">'+y+' 年（'+(y0-y)+' 年前）</div>';
+    if(recs.length)s+='<div><span class="tag">'+recs.length+' 次</span> <span class="sub">'+recs.map(r=>(r.time||'')+(r.dur?' '+r.dur+'分':'')).join('、')+'</span></div>'+
+      recs.filter(r=>r.note).map(r=>'<div class="note">'+esc(r.note)+'</div>').join('');
+    ['a','b'].forEach(k=>{if((di[k]||'').trim())s+='<div class="note" style="margin-top:6px"><b>'+esc(S.settings[k])+'：</b>'+esc(di[k])+'</div>';});
+    return s+'</div>';
+  }).join('');
+  return h+'</div>';
+}
+
+/* ---------- 今天 ---------- */
+function nextOccur(s,t){
+  if(!s.yearly)return s.date>=t?s.date:null;
+  const y=+t.slice(0,4);let d=y+s.date.slice(4);
+  if(d<t)d=(y+1)+s.date.slice(4);
+  return d;
+}
+function vHome(){
+  const t=today(),d=parse(t),sps=spOn(t);
+  let h='<div class="hero"><div class="deco">🌭🙊</div><div class="sub">'+d.getFullYear()+' 年 · 週'+WD[d.getDay()]+'</div><h1>'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</h1>'+
+    '<div class="pair">'+esc(S.settings.a)+' 💞 '+esc(S.settings.b)+'</div><div class="spark">✨</div></div>';
+  sps.forEach(s=>{
+    const n=s.yearly?(+t.slice(0,4))-(+s.date.slice(0,4)):0;
+    h+='<div class="banner"><b>🎉 今天是「'+esc(s.name)+'」'+(n>0?' · 滿 '+n+' 年':'')+'</b><span>特別的日子，很適合安排一段只屬於兩人的親密時光。</span></div>';
+  });
+  h+=dayDetail(t)+onThisDay(t);
+  const lim=fmt(addDays(d,60)),up=[];
+  S.specials.forEach(s=>{const n=nextOccur(s,t);if(n&&n>t&&n<=lim)up.push({d:n,t:s.name,k:'sp'});});
+  S.bookings.forEach(b=>{if(b.date>t)up.push({d:b.date,t:(b.time?b.time+' ':'')+(b.note||'兩人時光'),k:'bk'});});
+  up.sort((a,b)=>a.d.localeCompare(b.d));
+  if(up.length){
+    h+='<h2>🎈 即將到來</h2><div class="card">'+up.slice(0,8).map(u=>{
+      const n=Math.round((parse(u.d)-d)/864e5);
+      return '<div class="item"><button class="row" style="width:100%;text-align:left" data-act="pick-day" data-d="'+u.d+'" data-go="1">'+
+        '<span class="tag '+(u.k==='bk'?'amber':'')+'">'+(u.k==='bk'?'💌 預約':'⭐ 特別日')+'</span>'+
+        '<div class="grow"><b>'+esc(u.t)+'</b><div class="sub">'+nice(u.d)+'</div></div><span class="sub">'+n+' 天後</span></button></div>';
+    }).join('')+'</div>';
+  }
+  return h;
+}
+
+/* ---------- 行事曆 ---------- */
+function vCal(){
+  const first=new Date(calY,calM,1),lead=(first.getDay()+6)%7,dim=new Date(calY,calM+1,0).getDate(),t=today();
+  let h='<div class="calhead"><button data-act="cal-prev" aria-label="上個月">‹</button><b>📅 '+calY+' 年 '+(calM+1)+' 月</b><button data-act="cal-next" aria-label="下個月">›</button></div>';
+  h+='<div class="card"><div class="grid">'+['一','二','三','四','五','六','日'].map(w=>'<div class="wd">'+w+'</div>').join('');
+  for(let i=0;i<lead;i++)h+='<div></div>';
+  for(let n=1;n<=dim;n++){
+    const ds=calY+'-'+pad(calM+1)+'-'+pad(n);
+    const dots=(recsOn(ds).length?'<i class="em">💗</i>':'')+(bksOn(ds).length?'<i class="em">💌</i>':'')+
+      (spOn(ds).length?'<i class="em">⭐</i>':'')+(hasDiary(ds)?'<i class="em">📝</i>':'');
+    h+='<button class="day'+(ds===t?' today':'')+(ds===sel?' sel':'')+'" data-act="pick-day" data-d="'+ds+'">'+n+'<span class="dots">'+dots+'</span></button>';
+  }
+  h+='</div><div class="legend"><span>💗 紀錄</span><span>💌 預約</span><span>⭐ 特別日</span><span>📝 日記</span></div></div>';
+  h+='<div class="sub" style="text-align:center;margin-top:12px">點任一天，可查看當天的預約與紀錄，或新增內容</div>';
+  return h;
+}
+/* 點日期後跳出的當日視窗 */
+let sheetDay=null;
+function showDay(ds){
+  sheetDay=ds;sheetCb=null;
+  let h='<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">'+nice(ds)+(ds===today()?'（今天）':'')+'</h3>'+
+    '<button class="btn sm plain" data-act="sheet-close">關閉</button></div>';
+  spOn(ds).forEach(s=>{h+='<div class="card" style="margin-top:10px"><span class="tag" style="background:var(--plum);color:#fff">⭐ 特別日</span> <b>'+esc(s.name)+'</b></div>';});
+  if(!bksOn(ds).length)h+='<h2>💌 預約</h2><div class="card"><div class="empty"><b>💤</b>這天沒有預約</div></div>';
+  $('sheet').innerHTML=h+dayDetail(ds)+onThisDay(ds);
+  $('sheet').scrollTop=0;
+  $('mask').classList.add('on');
+}
+
+/* ---------- 統計 ---------- */
+function rangeStat(a,b){
+  const A=fmt(a),B=fmt(b),r=S.records.filter(x=>x.date>=A&&x.date<=B);
+  return {n:r.length,min:r.reduce((s,x)=>s+(+x.dur||0),0)};
+}
+function vStats(){
+  const now=parse(today()),y=now.getFullYear(),m=now.getMonth(),q=Math.floor(m/3);
+  const ws=addDays(now,-((now.getDay()+6)%7));
+  const P=[
+    ['🌙','本週',rangeStat(ws,addDays(ws,6)),rangeStat(addDays(ws,-7),addDays(ws,-1)),'上週'],
+    ['🌸','本月',rangeStat(new Date(y,m,1),new Date(y,m+1,0)),rangeStat(new Date(y,m-1,1),new Date(y,m,0)),'上月'],
+    ['🍀','本季（Q'+(q+1)+'）',rangeStat(new Date(y,q*3,1),new Date(y,q*3+3,0)),rangeStat(new Date(y,q*3-3,1),new Date(y,q*3,0)),'上季'],
+    ['🏆','今年',rangeStat(new Date(y,0,1),new Date(y,11,31)),rangeStat(new Date(y-1,0,1),new Date(y-1,11,31)),'去年']
+  ];
+  let h='<h1 class="title"><span>📊</span>統計</h1><div class="sub" style="margin-bottom:14px">每週從週一起算</div><div class="stats">'+P.map(p=>
+    '<div class="stat"><span class="e">'+p[0]+'</span><div class="l">'+p[1]+'</div><div class="n">'+p[2].n+'<small>次</small></div>'+
+    '<div class="p">'+p[4]+' '+p[3].n+' 次'+(p[2].min?' · 共 '+p[2].min+' 分':'')+'</div></div>').join('')+'</div>';
+
+  const yr=S.records.filter(r=>r.date.slice(0,4)===String(statY));
+  const by=Array(12).fill(0);yr.forEach(r=>by[+r.date.slice(5,7)-1]++);
+  const mx=Math.max(1,...by),timed=yr.filter(r=>+r.dur>0),tot=timed.reduce((s,r)=>s+(+r.dur),0);
+  h+='<div class="calhead" style="margin-top:18px"><button data-act="st-prev" aria-label="前一年">‹</button><b>'+statY+' 年每月次數</b><button data-act="st-next" aria-label="後一年">›</button></div>';
+  h+='<div class="card"><div class="chart">'+by.map((n,i)=>
+    '<div class="bar"><em>'+(n||'')+'</em><i class="'+(n?'':'zero')+'" style="height:'+(n?Math.max(4,n/mx*100):1)+'%"></i><span>'+(i+1)+'</span></div>').join('')+'</div></div>';
+  const qs=[0,1,2,3].map(i=>by[i*3]+by[i*3+1]+by[i*3+2]);
+  h+='<div class="card">'+
+    '<div class="item row"><div class="grow">💗 全年次數</div><b>'+yr.length+' 次</b></div>'+
+    '<div class="item row"><div class="grow">🍀 各季次數</div><b>'+qs.map((n,i)=>'Q'+(i+1)+' '+n).join(' · ')+'</b></div>'+
+    '<div class="item row"><div class="grow">⏱️ 平均每次時間</div><b>'+(timed.length?Math.round(tot/timed.length)+' 分鐘':'—')+'</b></div>'+
+    '<div class="item row"><div class="grow">🏅 最長一次</div><b>'+(timed.length?Math.max(...timed.map(r=>+r.dur))+' 分鐘':'—')+'</b></div>'+
+    '<div class="item row"><div class="grow">⏳ 累計時間</div><b>'+(tot?(Math.floor(tot/60)?Math.floor(tot/60)+' 小時 ':'')+(tot%60)+' 分':'—')+'</b></div></div>';
+  return h;
+}
+
+/* ---------- 設定 ---------- */
+function vSet(){
+  let h='<h1 class="title"><span>⚙️</span>設定</h1><h2>👫 兩人的稱呼</h2><div class="card"><div class="two">'+
+    '<div><label style="margin-top:0">第一位</label><input id="nameA" data-name="a" value="'+esc(S.settings.a)+'" maxlength="12"></div>'+
+    '<div><label style="margin-top:0">第二位</label><input id="nameB" data-name="b" value="'+esc(S.settings.b)+'" maxlength="12"></div></div></div>';
+  h+='<h2>⭐ 特別的日子</h2><div class="card">';
+  const sp=S.specials.slice().sort((a,b)=>a.date.slice(5).localeCompare(b.date.slice(5)));
+  h+=sp.length?sp.map(s=>'<div class="item"><button class="row" style="width:100%;text-align:left" data-act="edit-sp" data-id="'+s.id+'">'+
+    '<div class="grow"><b>'+esc(s.name)+'</b><div class="sub">'+(s.yearly?'每年 '+(+s.date.slice(5,7))+' 月 '+(+s.date.slice(8))+' 日（自 '+s.date.slice(0,4)+' 年）':nice(s.date))+'</div></div><span class="sub">›</span></button></div>').join('')
+    :'<div class="empty"><b>🎀</b>加入結婚紀念日、生日、交往紀念日等，當天打開 App 就會提醒。</div>';
+  h+='<div class="btns"><button class="btn ghost" data-act="add-sp">⭐ 新增特別的日子</button></div></div>';
+  h+='<h2>🔐 密碼鎖</h2><div class="card"><div class="note">'+(S.settings.pin?'已啟用。每次打開 App 都需要輸入密碼。':'尚未設定。設定後，打開 App 需先輸入密碼。')+'</div>'+
+    '<div class="btns"><button class="btn ghost" data-act="set-pin">'+(S.settings.pin?'變更或關閉密碼':'設定密碼')+'</button></div></div>';
+  h+='<h2>💾 備份</h2><div class="card"><div class="note">資料只存在這支手機裡，不會上傳到任何地方。建議定期匯出備份；把備份檔傳給另一半並匯入，兩支手機的內容就會一致。</div>'+
+    '<div class="btns"><button class="btn ghost" data-act="export">匯出備份</button><button class="btn plain" data-act="import">匯入備份</button></div>'+
+    '<input id="file" type="file" accept="application/json,.json" style="display:none"></div>';
+  h+='<div class="sub" style="text-align:center;margin-top:18px">共 '+S.records.length+' 筆紀錄 · '+Object.keys(S.diary).filter(hasDiary).length+' 篇日記</div>';
+  return h;
+}
+
+/* ---------- 表單 ---------- */
+let sheetCb=null;
+function openSheet(title,body,cb){
+  sheetCb=cb;
+  $('sheet').innerHTML='<h3>'+title+'</h3>'+body+'<div class="btns" style="margin-top:18px">'+
+    '<button class="btn" data-act="sheet-save">儲存</button><button class="btn plain" data-act="sheet-close">取消</button></div>'+
+    (cb.del?'<div class="btns"><button class="btn plain" style="color:var(--rose)" data-act="sheet-del">刪除</button></div>':'');
+  $('mask').classList.add('on');
+}
+function closeSheet(){
+  const back=sheetCb&&sheetDay;
+  sheetCb=null;render();
+  if(back)showDay(sheetDay);
+  else{sheetDay=null;$('mask').classList.remove('on');}
+}
+const val=id=>$(id).value.trim();
+
+function recForm(r,isNew,after){
+  const n=new Date();
+  openSheet(isNew?'新增紀錄':'修改紀錄',
+    '<div class="two"><div><label>日期</label><input id="f-date" type="date" value="'+r.date+'"></div>'+
+    '<div><label>開始時間</label><input id="f-time" type="time" value="'+(r.time||(isNew?pad(n.getHours())+':'+pad(n.getMinutes()):''))+'"></div></div>'+
+    '<label>時間長度（分鐘）</label><input id="f-dur" type="number" inputmode="numeric" min="0" max="999" placeholder="例如 30" value="'+(r.dur||'')+'">'+
+    '<label>備註（選填）</label><textarea id="f-note" placeholder="想記下的事…">'+esc(r.note||'')+'</textarea>',
+    {save(){
+      if(!val('f-date'))return toast('請選擇日期');
+      Object.assign(r,{date:val('f-date'),time:val('f-time'),dur:Math.max(0,parseInt(val('f-dur'),10)||0),note:val('f-note')});
+      if(isNew)S.records.push(r);
+      if(after)after();
+      save();toast('已儲存');return true;
+    },del:isNew?null:()=>{S.records=S.records.filter(x=>x!==r);save();}});
+}
+function bkForm(b,isNew){
+  openSheet(isNew?'新增預約':'修改預約',
+    '<div class="two"><div><label>日期</label><input id="f-date" type="date" value="'+b.date+'"></div>'+
+    '<div><label>時間</label><input id="f-time" type="time" value="'+(b.time||'')+'"></div></div>'+
+    '<label>想說的話（選填）</label><textarea id="f-note" placeholder="例如：今晚早點哄睡小孩">'+esc(b.note||'')+'</textarea>',
+    {save(){
+      if(!val('f-date'))return toast('請選擇日期');
+      Object.assign(b,{date:val('f-date'),time:val('f-time'),note:val('f-note')});
+      if(isNew)S.bookings.push(b);
+      save();toast('已預約');return true;
+    },del:isNew?null:()=>{S.bookings=S.bookings.filter(x=>x!==b);save();}});
+}
+function spForm(s,isNew){
+  openSheet(isNew?'新增特別的日子':'修改特別的日子',
+    '<label>名稱</label><input id="f-name" maxlength="30" placeholder="例如：結婚紀念日" value="'+esc(s.name||'')+'">'+
+    '<label>日期（每年重複時，請填第一次的日期）</label><input id="f-date" type="date" value="'+(s.date||today())+'">'+
+    '<label class="check"><input id="f-yearly" type="checkbox"'+(s.yearly!==false?' checked':'')+'>每年重複</label>',
+    {save(){
+      if(!val('f-name'))return toast('請輸入名稱');
+      if(!val('f-date'))return toast('請選擇日期');
+      Object.assign(s,{name:val('f-name'),date:val('f-date'),yearly:$('f-yearly').checked});
+      if(isNew)S.specials.push(s);
+      save();toast('已儲存');return true;
+    },del:isNew?null:()=>{S.specials=S.specials.filter(x=>x!==s);save();}});
+}
+function diaryForm(ds){
+  const d=S.diary[ds]||{a:'',b:''};
+  openSheet('共同日記 · '+nice(ds),
+    '<label>'+esc(S.settings.a)+'</label><textarea id="f-a" placeholder="今天想記下什麼？">'+esc(d.a||'')+'</textarea>'+
+    '<label>'+esc(S.settings.b)+'</label><textarea id="f-b" placeholder="今天想記下什麼？">'+esc(d.b||'')+'</textarea>',
+    {save(){
+      const a=val('f-a'),b=val('f-b');
+      if(a||b)S.diary[ds]={a,b};else delete S.diary[ds];
+      save();toast('已儲存');return true;
+    }});
+}
+function pinForm(){
+  openSheet('密碼鎖','<label>新密碼（4–8 位數字；留空則關閉密碼鎖）</label>'+
+    '<input id="f-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off">'+
+    '<div class="note" style="margin-top:8px">這是防止旁人隨手打開的簡易鎖。忘記密碼將無法進入，請務必記住。</div>',
+    {save(){
+      const p=val('f-pin');
+      if(p&&!/^\d{4,8}$/.test(p))return toast('請輸入 4–8 位數字');
+      S.settings.pin=p;save();toast(p?'已設定密碼':'已關閉密碼鎖');return true;
+    }});
+}
+
+/* ---------- 備份 ---------- */
+async function exportData(){
+  const name='ourdays-backup-'+today()+'.json',text=JSON.stringify(S,null,1);
+  try{
+    const f=new File([text],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  toast('已匯出備份');
+}
+function importData(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const j=JSON.parse(fr.result);
+      if(!j||!Array.isArray(j.records))throw 0;
+      const d=def();
+      S=Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});
+      save();toast('匯入完成');render();
+    }catch(e){toast('這不是有效的備份檔');}
+  };
+  fr.readAsText(file);
+}
+
+/* ---------- 事件 ---------- */
+const find=(arr,id)=>arr.find(x=>x.id===id);
+let delArmed=false;
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');
+  if(!el){if(e.target.id==='mask')closeSheet();return;}
+  const a=el.dataset.act,id=el.dataset.id,d=el.dataset.d;
+  if(a!=='sheet-del')delArmed=false;
+  switch(a){
+    case 'tab':tab=el.dataset.v;if(tab==='cal'){const s=parse(sel);calY=s.getFullYear();calM=s.getMonth();}render();window.scrollTo(0,0);break;
+    case 'add-rec':recForm({id:uid(),date:d,time:'',dur:0,note:''},true);break;
+    case 'edit-rec':recForm(find(S.records,id),false);break;
+    case 'add-bk':bkForm({id:uid(),date:d,time:'',note:''},true);break;
+    case 'edit-bk':bkForm(find(S.bookings,id),false);break;
+    case 'done-bk':{const b=find(S.bookings,id);
+      recForm({id:uid(),date:b.date,time:b.time,dur:0,note:''},true,()=>{S.bookings=S.bookings.filter(x=>x!==b);});break;}
+    case 'edit-diary':diaryForm(d);break;
+    case 'add-sp':spForm({id:uid(),yearly:true},true);break;
+    case 'edit-sp':spForm(find(S.specials,id),false);break;
+    case 'pick-day':sel=d;if(el.dataset.go){tab='cal';const s=parse(d);calY=s.getFullYear();calM=s.getMonth();window.scrollTo(0,0);}render();showDay(d);break;
+    case 'cal-prev':calM--;if(calM<0){calM=11;calY--;}render();break;
+    case 'cal-next':calM++;if(calM>11){calM=0;calY++;}render();break;
+    case 'st-prev':statY--;render();break;
+    case 'st-next':statY++;render();break;
+    case 'set-pin':pinForm();break;
+    case 'export':exportData();break;
+    case 'import':$('file').click();break;
+    case 'sheet-save':if(sheetCb&&sheetCb.save()===true)closeSheet();break;
+    case 'sheet-close':closeSheet();break;
+    case 'sheet-del':
+      if(!delArmed){delArmed=true;el.textContent='再按一次確認刪除';}
+      else{delArmed=false;sheetCb.del();toast('已刪除');closeSheet();}
+      break;
+    case 'unlock':unlock();break;
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.name){S.settings[t.dataset.name]=t.value.trim()||(t.dataset.name==='a'?'老公':'老婆');save();toast('已更新稱呼');}
+  if(t.id==='file'&&t.files&&t.files[0]){importData(t.files[0]);t.value='';}
+});
+function unlock(){
+  if($('pinIn').value===S.settings.pin){$('lock').classList.remove('on');$('pinIn').value='';}
+  else{$('pinIn').value='';toast('密碼不正確');}
+}
+$('pinIn').addEventListener('keydown',e=>{if(e.key==='Enter')unlock();});
+function lockIfNeeded(){if(S.settings.pin)$('lock').classList.add('on');}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)lockIfNeeded();
+  else if(!$('mask').classList.contains('on'))render();
+});
+
+lockIfNeeded();
+render();
+</script>
+</body>
+</html>

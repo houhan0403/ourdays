@@ -71,7 +71,7 @@ nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px
   display:flex;padding:6px 8px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
 nav button{flex:1;padding:6px 0;font-size:11px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav{border-radius:24px 24px 0 0;box-shadow:0 -4px 18px rgba(224,82,122,.08)}
-nav .ic{font-size:22px;line-height:1.2;padding:2px 16px;border-radius:99px;filter:grayscale(1);opacity:.55;transition:all .2s}
+nav .ic{font-size:22px;line-height:1.2;padding:2px 12px;border-radius:99px;filter:grayscale(1);opacity:.55;transition:all .2s}
 nav button.on .ic{filter:none;opacity:1;background:var(--rose-soft);transform:scale(1.08)}
 nav button.on{color:var(--rose);font-weight:600}
 /* calendar */
@@ -160,6 +160,13 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;display:block}
 .mqrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sw{width:34px;height:34px;border-radius:50%;border:2px solid #55555e}
 .sw.on{border-color:#fff;box-shadow:0 0 0 2px #888}
+.hsearch{display:flex;gap:8px;align-items:center;position:sticky;top:calc(env(safe-area-inset-top) + 4px);z-index:3;background:var(--bg);padding:6px 0}
+.hsearch input{border-radius:22px;padding-left:16px}
+.hday{padding:12px 0;border-bottom:1px dashed var(--line);white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.7}
+.hday:last-child{border-bottom:0}
+.hday:first-child{padding-top:0}
+.hyear{font-weight:700;color:var(--plum);font-size:14px;text-align:center;margin:14px 0 4px;letter-spacing:.1em}
+.hday mark{background:var(--amber-soft);color:var(--amber);border-radius:4px;padding:0 2px}
 .year{font-weight:700;color:var(--plum);font-size:14px;margin-bottom:4px}
 #gate{position:fixed;inset:0;background:var(--bg);z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center}
 #gate.off{display:none}
@@ -180,6 +187,7 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;display:block}
   <button data-act="tab" data-v="home"><span class="ic">💗</span>今天</button>
   <button data-act="tab" data-v="cal"><span class="ic">📅</span>行事曆</button>
   <button data-act="tab" data-v="stats"><span class="ic">📊</span>統計</button>
+  <button data-act="tab" data-v="hist"><span class="ic">📜</span>歷史紀錄</button>
   <button data-act="tab" data-v="set"><span class="ic">⚙️</span>設定</button>
 </nav>
 
@@ -196,8 +204,9 @@ const FB='https://www.gstatic.com/firebasejs/10.12.2/';
    settings: spaces/main {a,b,bda,bdb,wed,dat}
    records / bookings / specials: 各自一個 collection
    msgs（有話要說）: 每則留言一筆 {date,by,text,ts}
-   journal（心情小記）: 每天一筆 {a:{text,mood,ts,hist}, b:{...}}，各自只寫自己那欄 */
-const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:''},records:[],bookings:[],specials:[],msgs:[],journal:{}});
+   journal（心情小記）: 每天一筆 {a:{text,mood,ts,hist}, b:{...}}，各自只寫自己那欄
+   history（歷史紀錄）: 每天一筆 {date,text,ts}，凌晨 3 點後自動產生前一天的文字 */
+const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:'',emja:'🍗',emjb:'🍉',histClr:''},records:[],bookings:[],specials:[],msgs:[],journal:{},history:{}});
 let S=def();
 let me=null,myEmail='';           // me = 'a' | 'b'，由 Google 登入的帳號決定
 let db=null,auth=null,F=null,A=null;
@@ -297,9 +306,10 @@ let tab='home',sel=today(),calY=new Date().getFullYear(),calM=new Date().getMont
 function render(){
   if(!me)return;
   const v=$('view');
-  v.innerHTML=tab==='home'?vHome():tab==='cal'?vCal():tab==='stats'?vStats():vSet();
+  v.innerHTML=tab==='home'?vHome():tab==='cal'?vCal():tab==='stats'?vStats():tab==='hist'?vHist():vSet();
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
   fitChats();
+  if(tab==='hist')histFill();
 }
 /* 重畫目前畫面；當日視窗開著時一併更新並保留捲動位置與「有話要說」打到一半的字 */
 function redraw(){
@@ -319,6 +329,7 @@ function redraw(){
 function refresh(){
   const ae=document.activeElement;
   if(ae&&ae.dataset&&(ae.dataset.name||ae.dataset.set))return;
+  if(ae&&ae.id==='hq'){histFill();return;}
   redraw();
 }
 
@@ -466,6 +477,116 @@ function vStats(){
   return h;
 }
 
+/* ---------- 歷史紀錄 ----------
+   每天凌晨 3 點之後，第一支打開 App 的手機會把「前一天」的有話要說＋共同日記整理成文字存到雲端。
+   最近 7 天若有人補寫或修改，會自動更新；更早的維持原樣。 */
+const emj=k=>(S.settings['emj'+k]||'').trim()||(k==='a'?'🍗':'🍉');
+function dayText(ds){
+  const ms=msgsOn(ds).filter(m=>(m.text||'').trim()),js=['a','b'].filter(k=>jHas(ds,k));
+  if(!ms.length&&!js.length)return '';
+  const d=parse(ds),lines=['🗓️'+(d.getMonth()+1)+'/'+d.getDate()];
+  ms.forEach(m=>lines.push(emj(m.by)+'：'+m.text.trim()));
+  if(js.length){lines.push('<日記>');js.forEach(k=>lines.push(emj(k)+'：'+jOn(ds)[k].text.trim()));}
+  return lines.join('\n');
+}
+let archBusy=false;
+async function archiveDue(){
+  if(archBusy||!started||!me||!db)return;
+  const cut=fmt(addDays(new Date(Date.now()-3*3600e3),-1)),recent=fmt(addDays(parse(cut),-6));
+  const dates=new Set(S.msgs.map(m=>m.date).concat(Object.keys(S.journal)));
+  const ops=[];
+  dates.forEach(ds=>{
+    if(!DATE_RE.test(ds)||ds>cut)return;
+    if(S.settings.histClr&&ds<=S.settings.histClr)return;   // 已清除過的日子不再產生
+    const ex=S.history[ds];
+    if(ex&&ds<recent)return;
+    const t=dayText(ds);
+    if(t&&(!ex||ex.text!==t))ops.push([ds,t]);
+  });
+  if(!ops.length)return;
+  archBusy=true;
+  try{
+    for(let i=0;i<ops.length;i+=400){
+      const b=F.writeBatch(db);
+      ops.slice(i,i+400).forEach(([ds,t])=>b.set(dref('history',ds),{date:ds,text:t,ts:Date.now()}));
+      await b.commit();
+    }
+  }catch(e){console.error(e);}
+  archBusy=false;
+}
+setInterval(archiveDue,60*1000);
+const histKeys=()=>Object.keys(S.history).filter(k=>DATE_RE.test(k)&&S.history[k].text).sort();
+function histText(keys){
+  let y='',out=[];
+  keys.forEach(k=>{if(k.slice(0,4)!==y){y=k.slice(0,4);out.push('【'+y+' 年】');}out.push(S.history[k].text);});
+  return out.join('\n\n');
+}
+let hq='';
+function vHist(){
+  return '<h1 class="title"><span>📜</span>歷史紀錄</h1>'+
+    '<div class="sub" style="margin-bottom:6px">每天凌晨 3 點後，自動把前一天的「有話要說」和「共同日記」整理到這裡，一天接一天往下加。</div>'+
+    '<div class="hsearch"><input id="hq" type="search" placeholder="🔍 輸入關鍵字搜尋" value="'+esc(hq)+'" autocomplete="off">'+
+    '<button class="btn sm ghost" style="flex:none;min-height:44px" data-act="hist-dl">下載</button>'+
+    '<button class="btn sm plain" style="flex:none;min-height:44px;color:var(--rose)" data-act="hist-clear">清除</button></div>'+
+    '<div class="sub" id="hcount" style="margin:4px 4px 8px"></div><div class="card" id="hlist"></div>';
+}
+function histFill(){
+  const box=$('hlist');if(!box)return;
+  const q=hq.trim().toLowerCase(),all=histKeys();
+  const keys=q?all.filter(k=>S.history[k].text.toLowerCase().includes(q)):all;
+  const re=q?new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'):null;
+  $('hcount').textContent=!all.length?'':q?'找到 '+keys.length+' 天有「'+hq.trim()+'」':'共 '+all.length+' 天';
+  if(!keys.length){box.innerHTML='<div class="empty"><b>'+(q?'🔎':'📜')+'</b>'+(q?'找不到符合的內容':'還沒有歷史紀錄。<br>今天的留言和日記，明天凌晨 3 點後就會出現在這裡。')+'</div>';return;}
+  let y='',h='';
+  keys.forEach(k=>{
+    if(k.slice(0,4)!==y){y=k.slice(0,4);h+='<div class="hyear">【'+y+' 年】</div>';}
+    let t=esc(S.history[k].text);if(re)t=t.replace(re,m=>'<mark>'+m+'</mark>');
+    h+='<div class="hday" data-act="pick-day" data-d="'+k+'">'+t+'</div>';
+  });
+  box.innerHTML=h;
+}
+/* 清除：刪掉雲端所有歷史紀錄文字（兩人都會清空），並記住清到哪一天，避免被自動整理又產生回來 */
+function histClearAsk(){
+  const n=histKeys().length;
+  if(!n)return toast('歷史紀錄已經是空的');
+  sheetCb={};
+  $('sheet').innerHTML='<h3>清除歷史紀錄</h3><div class="card"><div class="note" style="color:var(--ink)">'+
+    '會刪除歷史紀錄裡全部 <b>'+n+' 天</b>的文字，兩人的手機都會一起清空，<b>無法復原</b>。\n\n'+
+    '建議先按「下載」把文字存起來。\n\n'+
+    '原本的「有話要說」和「共同日記」不會被刪除；今天起的新內容，之後還是會每天自動整理進來。</div></div>'+
+    '<div class="btns"><button class="btn ghost" data-act="hist-dl">先下載備份</button></div>'+
+    '<div class="btns"><button class="btn" style="background:#c9364f" data-act="hist-clear-ok">確定清除</button><button class="btn plain" data-act="sheet-close">取消</button></div>';
+  $('sheet').scrollTop=0;
+  $('mask').classList.add('on');
+}
+let clrArmed=0;
+async function histClear(el){
+  if(Date.now()-clrArmed>4000){clrArmed=Date.now();el.textContent='再按一次，真的清除';return;}
+  clrArmed=0;
+  const keys=Object.keys(S.history),cut=fmt(addDays(new Date(Date.now()-3*3600e3),-1));
+  try{
+    await F.setDoc(spaceRef(),{histClr:cut},{merge:true});
+    for(let i=0;i<keys.length;i+=400){
+      const b=F.writeBatch(db);
+      keys.slice(i,i+400).forEach(k=>b.delete(dref('history',k)));
+      await b.commit();
+    }
+    hq='';toast('已清除歷史紀錄');closeSheet();
+  }catch(e){console.error(e);toast('清除失敗，請確認網路');}
+}
+async function histDownload(){
+  const keys=histKeys();if(!keys.length)return toast('還沒有歷史紀錄');
+  const name='我們的日子-歷史紀錄-'+today()+'.txt',text='﻿'+histText(keys)+'\n';
+  try{
+    const f=new File([text],name,{type:'text/plain'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  toast('已下載');
+}
+
 /* ---------- 設定 ---------- */
 /* 這支手機上的本機版資料（ourdays.v1）；內容變過才會再提示上傳 */
 const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h.toString(36);};
@@ -480,7 +601,8 @@ function vSet(){
   const st=S.settings,ot=me==='a'?'b':'a';
   const person=(k,lab)=>'<div class="item"><div class="year">'+lab+'</div><div class="two">'+
     '<div><label style="margin-top:0">暱稱</label><input data-name="'+k+'" value="'+esc(st[k])+'" maxlength="12"></div>'+
-    '<div><label style="margin-top:0">生日 🎂</label><input type="date" data-set="bd'+k+'" value="'+esc(st['bd'+k])+'"></div></div></div>';
+    '<div><label style="margin-top:0">生日 🎂</label><input type="date" data-set="bd'+k+'" value="'+esc(st['bd'+k])+'"></div></div>'+
+    '<label>歷史紀錄裡的代表符號</label><input data-set="emj'+k+'" value="'+esc(emj(k))+'" maxlength="8" style="max-width:120px"></div>';
   let h='<h1 class="title"><span>⚙️</span>設定</h1>';
   const old=oldLocalData();
   if(old)h+='<div class="banner"><b>📦 發現這支手機上的本機資料</b><span>共 '+old.records.length+' 筆紀錄、'+Object.keys(old.journal||{}).length+' 天心情小記。上傳後兩人都看得到；雲端已有的內容不會被覆蓋。</span>'+
@@ -631,7 +753,7 @@ function pinForm(){
 function backupObj(){
   const diary={};
   S.msgs.forEach(m=>{(diary[m.date]=diary[m.date]||{msgs:[]}).msgs.push({id:m.id,by:m.by,text:m.text,ts:m.ts||0});});
-  return {settings:S.settings,records:S.records,bookings:S.bookings,specials:S.specials,diary:diary,journal:S.journal};
+  return {settings:S.settings,records:S.records,bookings:S.bookings,specials:S.specials,diary:diary,journal:S.journal,history:S.history};
 }
 async function exportData(){
   const name='ourdays-backup-'+today()+'.json',text=JSON.stringify(backupObj(),null,1);
@@ -716,7 +838,7 @@ document.addEventListener('click',e=>{
   const a=el.dataset.act,id=el.dataset.id,d=el.dataset.d;
   if(a!=='sheet-del')delArmed=false;
   switch(a){
-    case 'tab':tab=el.dataset.v;if(tab==='cal'){const s=parse(sel);calY=s.getFullYear();calM=s.getMonth();}render();window.scrollTo(0,0);break;
+    case 'tab':tab=el.dataset.v;if(tab==='cal'){const s=parse(sel);calY=s.getFullYear();calM=s.getMonth();}render();window.scrollTo(0,tab==='hist'&&!hq.trim()?document.body.scrollHeight:0);break;
     case 'add-rec':recForm({id:uid(),date:d,time:'',dur:0,note:''},true);break;
     case 'edit-rec':{const r=find(S.records,id);if(!r)break;if(mineRec(r))recForm({...r},false);else viewRec(r);break;}
     case 'add-bk':bkForm({id:uid(),date:d,time:'',note:''},true);break;
@@ -731,8 +853,8 @@ document.addEventListener('click',e=>{
       const ta=el.closest('.chatin').querySelector('textarea'),t=ta.value.trim();
       if(!t)break;
       ta.value='';ta.style.height='44px';
-      const mid=uid();
-      w(F.setDoc(dref('msgs',mid),{date:d,by:me,text:t,ts:Date.now()}));
+      const mid=uid(),last=msgsOn(d).reduce((x,m)=>Math.max(x,m.ts||0),0);
+      w(F.setDoc(dref('msgs',mid),{date:d,by:me,text:t,ts:Math.max(Date.now(),last+1)}));
       break;}
     case 'chat-del':{
       const m=S.msgs.find(x=>x.id===id);
@@ -748,6 +870,9 @@ document.addEventListener('click',e=>{
     case 'st-next':statY++;render();break;
     case 'set-pin':pinForm();break;
     case 'export':exportData();break;
+    case 'hist-dl':histDownload();break;
+    case 'hist-clear':histClearAsk();break;
+    case 'hist-clear-ok':histClear(el);break;
     case 'import':$('file').click();break;
     case 'migrate':migrate();break;
     case 'migrate-skip':{const raw=lsGet(OLD_KEY);if(raw)lsSet(MIG_KEY,hash(raw));render();break;}
@@ -768,6 +893,7 @@ document.addEventListener('click',e=>{
       el.parentNode.querySelectorAll('.sw').forEach(b=>b.classList.toggle('on',b===el));break;
   }
 });
+document.addEventListener('input',e=>{if(e.target.id==='hq'){hq=e.target.value;histFill();}});
 document.addEventListener('input',e=>{const t=e.target;if(t.closest&&t.closest('.chatin')){t.style.height='44px';t.style.height=Math.min(120,t.scrollHeight+2)+'px';}});
 document.addEventListener('input',e=>{
   const t=e.target;
@@ -776,6 +902,8 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.dataset&&(t.dataset.set==='emja'||t.dataset.set==='emjb')){
+    const v=t.value.trim()||(t.dataset.set==='emja'?'🍗':'🍉');setSettings({[t.dataset.set]:v});toast('已更新代表符號');}
   if(t.dataset&&['bda','bdb','wed','dat'].indexOf(t.dataset.set)>=0){
     const v=DATE_RE.test(t.value)?t.value:'';setSettings({[t.dataset.set]:v});toast(v?'已更新，並加入行事曆':'已清除');}
   if(t.dataset&&t.dataset.name){
@@ -850,7 +978,7 @@ function lockIfNeeded(){
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden)lockIfNeeded();
-  else if(me&&started&&!$('mask').classList.contains('on'))render();
+  else{archiveDue();if(me&&started&&!$('mask').classList.contains('on'))render();}
 });
 const setOffline=()=>$('offline').classList.toggle('on',!navigator.onLine);
 addEventListener('online',setOffline);addEventListener('offline',setOffline);setOffline();
@@ -876,7 +1004,7 @@ function gate(state,msg){
 }
 
 /* ---------- Firebase 連線 ---------- */
-const LISTENERS=7;
+const LISTENERS=8;
 let unsubs=[],got=new Set(),started=false;
 function stopListen(){unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
 function onErr(e){
@@ -887,7 +1015,7 @@ function onErr(e){
 function changed(n){
   got.add(n);
   if(got.size<LISTENERS)return;
-  if(!started){started=true;gate('off');render();return;}
+  if(!started){started=true;gate('off');render();archiveDue();return;}
   refresh();
 }
 function listen(){
@@ -896,6 +1024,8 @@ function listen(){
     S[n]=snap.docs.map(d=>({...d.data(),id:d.id}));changed(n);},onErr)));
   unsubs.push(F.onSnapshot(col('journal'),snap=>{
     const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.journal=o;changed('journal');},onErr));
+  unsubs.push(F.onSnapshot(col('history'),snap=>{
+    const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.history=o;changed('history');},onErr));
   unsubs.push(F.onSnapshot(col('diary'),snap=>{convertLegacyDiary(snap.docs);changed('diary');},onErr));
   unsubs.push(F.onSnapshot(spaceRef(),snap=>{
     S.settings=Object.assign(def().settings,snap.exists()?snap.data():{});changed('settings');},onErr));

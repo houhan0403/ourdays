@@ -341,8 +341,7 @@ function dayDetail(ds){
     h+='<h2>💌 預約</h2><div class="card">'+bks.map(b=>
       '<div class="item"><div class="row"><span class="tag amber">'+esc(b.time||'時間未定')+'</span>'+
       '<div class="grow note">'+esc(b.note||'兩人時光')+'</div></div>'+
-      '<div class="btns" style="margin-top:8px"><button class="btn sm ghost" data-act="done-bk" data-id="'+b.id+'">✅ 完成，轉為紀錄</button>'+
-      '<button class="btn sm plain" data-act="edit-bk" data-id="'+b.id+'">修改</button></div></div>').join('')+'</div>';
+      '<div class="btns" style="margin-top:8px"><button class="btn sm plain" data-act="edit-bk" data-id="'+b.id+'">修改</button></div></div>').join('')+'</div>';
   }
   h+='<h2>💗 紀錄</h2><div class="card">';
   h+=recs.length?recs.map(r=>
@@ -843,8 +842,6 @@ document.addEventListener('click',e=>{
     case 'edit-rec':{const r=find(S.records,id);if(!r)break;if(mineRec(r))recForm({...r},false);else viewRec(r);break;}
     case 'add-bk':bkForm({id:uid(),date:d,time:'',note:''},true);break;
     case 'edit-bk':{const b=find(S.bookings,id);if(b)bkForm({...b},false);break;}
-    case 'done-bk':{const b=find(S.bookings,id);if(!b)break;
-      recForm({id:uid(),date:b.date,time:b.time,dur:0,note:''},true,()=>remove('bookings',b.id));break;}
     case 'j-edit':jForm(d);break;
     case 'j-hist':jHist(d,el.dataset.k);break;
     case 'j-mood':jMood=jMood===el.dataset.v?'':el.dataset.v;

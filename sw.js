@@ -1,8 +1,8 @@
 // 離線用快取：網頁本身「先抓網路、失敗才用快取」，所以更新 GitHub 後會自動拿到新版
-const CACHE = 'ourdays-v1';
-const SHELL = ['./', './index.html', './manifest.json', './firebase-config.js', './icon-180.png', './icon-192.png', './icon-512.png'];
+const CACHE = 'ourdays-v2';
+const SHELL = ['./', './index.html', './manifest.json', './firebase-config.js'];
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));

@@ -134,6 +134,10 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;display:block}
 .msg.me{flex-direction:row-reverse}
 .bub{max-width:76%;padding:8px 13px;border-radius:18px 18px 18px 6px;white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.45;background:var(--bg2);border:1px solid var(--line);text-align:left}
 .msg.me .bub{background:var(--rose);color:#fff;border-color:transparent;border-radius:18px 18px 6px 18px}
+.bub[data-mid]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;transition:transform .15s,filter .15s}
+.bub.press{transform:scale(.96);filter:brightness(.92)}
+.chathint{font-size:12px;color:var(--mute);text-align:right;margin-top:6px}
+.preview{background:var(--rose);color:#fff;border-radius:18px 18px 6px 18px;padding:9px 14px;white-space:pre-wrap;word-break:break-word;max-height:30vh;overflow:auto;margin:0 0 4px auto;width:fit-content;max-width:90%}
 .msg time{font-size:11px;color:var(--mute);white-space:nowrap;padding-bottom:2px}
 .who{font-size:12px;color:var(--mute);margin:2px 0 -4px 6px}
 .chatin{display:flex;gap:8px;align-items:flex-end;margin-top:14px}
@@ -283,9 +287,9 @@ function chatHtml(ds){
   return '<div class="chat">'+msgsOn(ds).map(m=>{
     const mine=m.by===me;
     return '<div class="mi">'+(mine?'':'<div class="who">'+esc(S.settings[m.by]||'')+'</div>')+
-      '<div class="msg'+(mine?' me':'')+'"><div class="bub"'+(mine?' data-act="chat-del" data-d="'+ds+'" data-id="'+esc(m.id)+'"':'')+'>'+esc(m.text)+'</div>'+
-      '<time>'+msgTime(m.ts,ds)+'</time></div></div>';
-  }).join('')+'</div>';
+      '<div class="msg'+(mine?' me':'')+'"><div class="bub"'+(mine?' data-mid="'+esc(m.id)+'"':'')+'>'+esc(m.text)+'</div>'+
+      '<time>'+msgTime(m.ts,ds)+(m.edited?'<br>已編輯':'')+'</time></div></div>';
+  }).join('')+'</div>'+(msgsOn(ds).some(m=>m.by===me)?'<div class="chathint">長按自己的留言可以編輯或刪除</div>':'');
 }
 /* 「有話要說」的視窗最多顯示最新 8 則的高度，更早的往上捲動查看 */
 const CHAT_MAX=8;
@@ -828,6 +832,50 @@ async function convertLegacyDiary(docs){
   legacyBusy=false;
 }
 
+/* ---------- 有話要說：長按自己的留言 → 編輯／刪除 ---------- */
+let lp=null,lpFired=0,lpEat=false;
+function lpClear(){if(lp){clearTimeout(lp.t);if(lp.el)lp.el.classList.remove('press');lp=null;}}
+document.addEventListener('pointerdown',e=>{
+  lpEat=false;
+  const b=e.target.closest&&e.target.closest('.bub[data-mid]');if(!b)return;
+  lpClear();
+  lp={el:b,x:e.clientX,y:e.clientY,t:setTimeout(()=>{const id=b.dataset.mid;lpClear();lpFired=Date.now();lpEat=true;
+    try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}msgMenu(id);},500)};
+  b.classList.add('press');
+});
+document.addEventListener('pointermove',e=>{if(lp&&(Math.abs(e.clientX-lp.x)>10||Math.abs(e.clientY-lp.y)>10))lpClear();});
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,lpClear));
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.bub[data-mid]'))e.preventDefault();});
+/* 長按放開後的那一下點擊不要觸發底下的東西（例如關閉視窗） */
+document.addEventListener('click',e=>{if(lpEat){lpEat=false;if(Date.now()-lpFired<1500){e.stopPropagation();e.preventDefault();}}},true);
+function msgSheet(html){sheetCb={};$('sheet').innerHTML=html;$('sheet').scrollTop=0;$('mask').classList.add('on');}
+function msgMenu(id){
+  const m=S.msgs.find(x=>x.id===id);if(!m||m.by!==me)return;
+  msgSheet('<h3>我的留言</h3><div class="preview">'+esc(m.text)+'</div><div class="sub" style="text-align:right;margin-bottom:6px">'+msgTime(m.ts,m.date)+'</div>'+
+    '<div class="btns"><button class="btn ghost" data-act="msg-edit" data-id="'+esc(id)+'">✏️ 編輯</button>'+
+    '<button class="btn ghost" style="color:#c9364f" data-act="msg-del-ask" data-id="'+esc(id)+'">🗑️ 刪除</button></div>'+
+    '<div class="btns"><button class="btn plain" data-act="sheet-close">取消</button></div>');
+}
+function msgDelAsk(id){
+  const m=S.msgs.find(x=>x.id===id);if(!m||m.by!==me)return;
+  msgSheet('<h3>確定要刪除這則留言嗎？</h3><div class="preview">'+esc(m.text)+'</div>'+
+    '<div class="note" style="margin:10px 2px 4px">刪除後兩人都看不到，無法復原。</div>'+
+    '<div class="btns"><button class="btn" style="background:#c9364f" data-act="msg-del-ok" data-id="'+esc(id)+'">刪除</button>'+
+    '<button class="btn plain" data-act="sheet-close">取消</button></div>');
+}
+function msgEdit(id){
+  const m=S.msgs.find(x=>x.id===id);if(!m||m.by!==me)return;
+  openSheet('編輯留言','<textarea id="f-msg" maxlength="2000" style="min-height:120px">'+esc(m.text)+'</textarea>',
+    {save(){
+      const t=val('f-msg');
+      if(!t)return toast('留言不能是空的；要刪除請長按留言選「刪除」');
+      if(t===m.text)return true;
+      w(F.setDoc(dref('msgs',id),{text:t,edited:Date.now()},{merge:true}));
+      toast('已更新');return true;
+    }});
+  setTimeout(()=>{const t=$('f-msg');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);}},50);
+}
+
 /* ---------- 事件 ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
 let delArmed=false,delMsg='',delAt=0;
@@ -853,11 +901,9 @@ document.addEventListener('click',e=>{
       const mid=uid(),last=msgsOn(d).reduce((x,m)=>Math.max(x,m.ts||0),0);
       w(F.setDoc(dref('msgs',mid),{date:d,by:me,text:t,ts:Math.max(Date.now(),last+1)}));
       break;}
-    case 'chat-del':{
-      const m=S.msgs.find(x=>x.id===id);
-      if(!m||m.by!==me)break;
-      if(delMsg!==id||Date.now()-delAt>4000){delMsg=id;delAt=Date.now();toast('再點一次，刪除這則留言');break;}
-      delMsg='';remove('msgs',id);toast('已刪除');break;}
+    case 'msg-edit':msgEdit(id);break;
+    case 'msg-del-ask':msgDelAsk(id);break;
+    case 'msg-del-ok':{const m=S.msgs.find(x=>x.id===id);if(m&&m.by===me){remove('msgs',id);toast('已刪除');}closeSheet();break;}
     case 'add-sp':spForm({id:uid(),yearly:true},true);break;
     case 'edit-sp':{const s=find(S.specials,id);if(s)spForm({...s},false);break;}
     case 'pick-day':sel=d;if(el.dataset.go){tab='cal';const s=parse(d);calY=s.getFullYear();calM=s.getMonth();window.scrollTo(0,0);}render();showDay(d);break;

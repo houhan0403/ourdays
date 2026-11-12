@@ -13,6 +13,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>我們的日子</title>
+<script>
+/* LINE 內建瀏覽器會擋 Google 登入：自動改用手機預設瀏覽器開啟 */
+(function(){var u=navigator.userAgent;if(/\bLine\//i.test(u)&&!/openExternalBrowser=1/.test(location.search)){location.replace(location.href.split('#')[0]+(location.search?'&':'?')+'openExternalBrowser=1');}})();
+</script>
 <style>
 :root{
   --bg:#fff4f6;--bg2:#fdeef7;--card:#ffffff;--ink:#3a2530;--mute:#9a8490;--line:#f6dfe6;
@@ -119,10 +123,21 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;-webkit-appea
 #lock.on{display:flex}
 #lock input{max-width:220px;text-align:center;font-size:24px;letter-spacing:.4em}
 .year{font-weight:700;color:var(--plum);font-size:14px;margin-bottom:4px}
+#gate{position:fixed;inset:0;background:var(--bg);z-index:25;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center}
+#gate.off{display:none}
+#gate .note{max-width:320px}
+.gbtn{display:inline-flex;align-items:center;gap:10px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:11px 20px;font-weight:600;min-height:46px;box-shadow:var(--shadow)}
+.gbtn svg{width:20px;height:20px}
+.spin{width:28px;height:28px;border:3px solid var(--rose-soft);border-top-color:var(--rose);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.offline{position:fixed;top:calc(env(safe-area-inset-top) + 6px);left:50%;transform:translateX(-50%);background:var(--amber-soft);color:var(--amber);font-size:12px;font-weight:600;padding:3px 12px;border-radius:99px;z-index:6;display:none}
+.offline.on{display:block}
+.ro{background:var(--bg2);border:1px dashed var(--line);border-radius:12px;padding:10px 12px;min-height:46px}
 </style>
 </head>
 <body>
 <div id="view"></div>
+<div id="offline" class="offline">離線中 · 連線後會自動同步</div>
 
 <nav id="nav">
   <button data-act="tab" data-v="home"><span class="ic">💗</span>今天</button>
@@ -133,6 +148,7 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;-webkit-appea
 
 <div id="mask"><div id="sheet"></div></div>
 <div id="toast"></div>
+<div id="gate"><div class="spin"></div><div class="sub">載入中…</div></div>
 <div id="lock">
   <div style="font-size:56px">🌭💞🙊</div>
   <h1>我們的日子</h1>
@@ -141,19 +157,27 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;-webkit-appea
   <button class="btn" data-act="unlock">解鎖</button>
 </div>
 
-<script>
-'use strict';
-/* ---------- 資料 ---------- */
-const KEY='ourdays.v1';
-const def=()=>({settings:{a:'老公',b:'老婆',pin:''},records:[],bookings:[],specials:[],diary:{}});
-function load(){
-  try{const j=JSON.parse(localStorage.getItem(KEY));
-    if(j&&Array.isArray(j.records)){const d=def();return Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});}
-  }catch(e){}
-  return def();
-}
-let S=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('儲存失敗，請檢查手機空間');}}
+<script type="module">
+import {firebaseConfig,MEMBERS,SPACE} from './firebase-config.js';
+const FB='https://www.gstatic.com/firebasejs/10.12.2/';
+
+/* ---------- 資料（記憶體中的鏡像，由 Firestore 即時更新） ---------- */
+const def=()=>({settings:{a:'老公',b:'老婆'},records:[],bookings:[],specials:[],diary:{}});
+let S=def();
+let me=null,myEmail='';           // me = 'a' | 'b'
+let db=null,auth=null,F=null,A=null;
+const PIN_KEY='ourdays.pin',OLD_KEY='ourdays.v1',MIG_KEY='ourdays.migrated';
+const lsGet=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
+const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}};
+const getPin=()=>lsGet(PIN_KEY)||'';
+
+const col=n=>F.collection(db,'spaces',SPACE,n);
+const dref=(n,id)=>F.doc(db,'spaces',SPACE,n,id);
+const spaceRef=()=>F.doc(db,'spaces',SPACE);
+const plain=o=>{const x=JSON.parse(JSON.stringify(o));delete x.id;return x;};
+function w(p){p.catch(e=>{console.error(e);toast(e.code==='permission-denied'?'沒有寫入權限':'同步失敗，請稍後再試');});}
+const put=(n,o)=>w(F.setDoc(dref(n,o.id),{...plain(o),by:me,ts:Date.now()}));
+const remove=(n,id)=>w(F.deleteDoc(dref(n,id)));
 
 /* ---------- 工具 ---------- */
 const $=id=>document.getElementById(id);
@@ -181,6 +205,13 @@ function render(){
   v.innerHTML=tab==='home'?vHome():tab==='cal'?vCal():tab==='stats'?vStats():vSet();
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
 }
+/* 雲端資料變動時重繪（避開正在輸入的欄位與開著的表單） */
+function refresh(){
+  const ae=document.activeElement;
+  if(ae&&ae.dataset&&ae.dataset.name)return;
+  render();
+  if($('mask').classList.contains('on')&&!sheetCb&&sheetDay){const st=$('sheet').scrollTop;showDay(sheetDay);$('sheet').scrollTop=st;}
+}
 
 /* ---------- 單日內容（今天、行事曆共用） ---------- */
 function dayDetail(ds){
@@ -205,7 +236,8 @@ function dayDetail(ds){
   if(hasDiary(ds)){
     h+=['a','b'].map(k=>(di[k]||'').trim()?'<div class="item"><div class="year">'+esc(S.settings[k])+'</div><div class="note" style="color:var(--ink)">'+esc(di[k])+'</div></div>':'').join('');
   }else h+='<div class="empty"><b>✏️</b>這天還沒有日記</div>';
-  h+='<div class="btns"><button class="btn ghost" data-act="edit-diary" data-d="'+ds+'">'+(hasDiary(ds)?'✏️ 編輯日記':'✏️ 寫日記')+'</button></div></div>';
+  const mine=(di[me]||'').trim();
+  h+='<div class="btns"><button class="btn ghost" data-act="edit-diary" data-d="'+ds+'">'+(mine?'✏️ 編輯我的日記':'✏️ 寫我的日記')+'</button></div></div>';
   return h;
 }
 
@@ -220,7 +252,7 @@ function onThisDay(ds){
   else h+=ys.map(y=>{
     const d=y+'-'+md,recs=recsOn(d),di=S.diary[d]||{};
     let s='<div class="item"><div class="year">'+y+' 年（'+(y0-y)+' 年前）</div>';
-    if(recs.length)s+='<div><span class="tag">'+recs.length+' 次</span> <span class="sub">'+recs.map(r=>(r.time||'')+(r.dur?' '+r.dur+'分':'')).join('、')+'</span></div>'+
+    if(recs.length)s+='<div><span class="tag">'+recs.length+' 次</span> <span class="sub">'+recs.map(r=>esc(r.time||'')+(r.dur?' '+r.dur+'分':'')).join('、')+'</span></div>'+
       recs.filter(r=>r.note).map(r=>'<div class="note">'+esc(r.note)+'</div>').join('');
     ['a','b'].forEach(k=>{if((di[k]||'').trim())s+='<div class="note" style="margin-top:6px"><b>'+esc(S.settings[k])+'：</b>'+esc(di[k])+'</div>';});
     return s+'</div>';
@@ -323,8 +355,21 @@ function vStats(){
 }
 
 /* ---------- 設定 ---------- */
+function oldLocalData(){
+  if(lsGet(MIG_KEY))return null;
+  try{const j=JSON.parse(lsGet(OLD_KEY));
+    if(j&&Array.isArray(j.records)&&(j.records.length||(j.bookings||[]).length||(j.specials||[]).length||Object.keys(j.diary||{}).length))return j;
+  }catch(e){}
+  return null;
+}
 function vSet(){
-  let h='<h1 class="title"><span>⚙️</span>設定</h1><h2>👫 兩人的稱呼</h2><div class="card"><div class="two">'+
+  let h='<h1 class="title"><span>⚙️</span>設定</h1>';
+  const old=oldLocalData();
+  if(old)h+='<div class="banner"><b>📦 發現這支手機上的舊資料</b><span>共 '+old.records.length+' 筆紀錄、'+Object.keys(old.diary||{}).length+' 篇日記。上傳後兩人都看得到。</span>'+
+    '<div class="btns"><button class="btn sm" style="background:#fff;color:var(--rose)" data-act="migrate">上傳到雲端</button><button class="btn sm" style="background:rgba(255,255,255,.25)" data-act="migrate-skip">不用了</button></div></div>';
+  h+='<h2>🙋 帳號</h2><div class="card"><div class="row"><div class="grow"><b>'+esc(S.settings[me])+'</b><div class="sub" style="word-break:break-all">'+esc(myEmail)+'</div></div>'+
+    '<button class="btn sm plain" data-act="logout">登出</button></div></div>';
+  h+='<h2>👫 兩人的稱呼</h2><div class="card"><div class="two">'+
     '<div><label style="margin-top:0">第一位</label><input id="nameA" data-name="a" value="'+esc(S.settings.a)+'" maxlength="12"></div>'+
     '<div><label style="margin-top:0">第二位</label><input id="nameB" data-name="b" value="'+esc(S.settings.b)+'" maxlength="12"></div></div></div>';
   h+='<h2>⭐ 特別的日子</h2><div class="card">';
@@ -333,9 +378,9 @@ function vSet(){
     '<div class="grow"><b>'+esc(s.name)+'</b><div class="sub">'+(s.yearly?'每年 '+(+s.date.slice(5,7))+' 月 '+(+s.date.slice(8))+' 日（自 '+s.date.slice(0,4)+' 年）':nice(s.date))+'</div></div><span class="sub">›</span></button></div>').join('')
     :'<div class="empty"><b>🎀</b>加入結婚紀念日、生日、交往紀念日等，當天打開 App 就會提醒。</div>';
   h+='<div class="btns"><button class="btn ghost" data-act="add-sp">⭐ 新增特別的日子</button></div></div>';
-  h+='<h2>🔐 密碼鎖</h2><div class="card"><div class="note">'+(S.settings.pin?'已啟用。每次打開 App 都需要輸入密碼。':'尚未設定。設定後，打開 App 需先輸入密碼。')+'</div>'+
-    '<div class="btns"><button class="btn ghost" data-act="set-pin">'+(S.settings.pin?'變更或關閉密碼':'設定密碼')+'</button></div></div>';
-  h+='<h2>💾 備份</h2><div class="card"><div class="note">資料只存在這支手機裡，不會上傳到任何地方。建議定期匯出備份；把備份檔傳給另一半並匯入，兩支手機的內容就會一致。</div>'+
+  h+='<h2>🔐 這支手機的密碼鎖</h2><div class="card"><div class="note">'+(getPin()?'已啟用。每次打開 App 都需要輸入密碼。':'尚未設定。設定後，在這支手機打開 App 需先輸入密碼。')+'</div>'+
+    '<div class="btns"><button class="btn ghost" data-act="set-pin">'+(getPin()?'變更或關閉密碼':'設定密碼')+'</button></div></div>';
+  h+='<h2>💾 備份</h2><div class="card"><div class="note">資料存在雲端，兩人即時同步，只有你們兩個 Google 帳號能讀寫。也可以匯出一份備份檔自己保存；匯入會把備份檔內容合併進雲端。</div>'+
     '<div class="btns"><button class="btn ghost" data-act="export">匯出備份</button><button class="btn plain" data-act="import">匯入備份</button></div>'+
     '<input id="file" type="file" accept="application/json,.json" style="display:none"></div>';
   h+='<div class="sub" style="text-align:center;margin-top:18px">共 '+S.records.length+' 筆紀錄 · '+Object.keys(S.diary).filter(hasDiary).length+' 篇日記</div>';
@@ -349,6 +394,7 @@ function openSheet(title,body,cb){
   $('sheet').innerHTML='<h3>'+title+'</h3>'+body+'<div class="btns" style="margin-top:18px">'+
     '<button class="btn" data-act="sheet-save">儲存</button><button class="btn plain" data-act="sheet-close">取消</button></div>'+
     (cb.del?'<div class="btns"><button class="btn plain" style="color:var(--rose)" data-act="sheet-del">刪除</button></div>':'');
+  $('sheet').scrollTop=0;
   $('mask').classList.add('on');
 }
 function closeSheet(){
@@ -369,10 +415,10 @@ function recForm(r,isNew,after){
     {save(){
       if(!val('f-date'))return toast('請選擇日期');
       Object.assign(r,{date:val('f-date'),time:val('f-time'),dur:Math.max(0,parseInt(val('f-dur'),10)||0),note:val('f-note')});
-      if(isNew)S.records.push(r);
+      put('records',r);
       if(after)after();
-      save();toast('已儲存');return true;
-    },del:isNew?null:()=>{S.records=S.records.filter(x=>x!==r);save();}});
+      toast('已儲存');return true;
+    },del:isNew?null:()=>remove('records',r.id)});
 }
 function bkForm(b,isNew){
   openSheet(isNew?'新增預約':'修改預約',
@@ -382,9 +428,9 @@ function bkForm(b,isNew){
     {save(){
       if(!val('f-date'))return toast('請選擇日期');
       Object.assign(b,{date:val('f-date'),time:val('f-time'),note:val('f-note')});
-      if(isNew)S.bookings.push(b);
-      save();toast('已預約');return true;
-    },del:isNew?null:()=>{S.bookings=S.bookings.filter(x=>x!==b);save();}});
+      put('bookings',b);
+      toast('已預約');return true;
+    },del:isNew?null:()=>remove('bookings',b.id)});
 }
 function spForm(s,isNew){
   openSheet(isNew?'新增特別的日子':'修改特別的日子',
@@ -395,33 +441,35 @@ function spForm(s,isNew){
       if(!val('f-name'))return toast('請輸入名稱');
       if(!val('f-date'))return toast('請選擇日期');
       Object.assign(s,{name:val('f-name'),date:val('f-date'),yearly:$('f-yearly').checked});
-      if(isNew)S.specials.push(s);
-      save();toast('已儲存');return true;
-    },del:isNew?null:()=>{S.specials=S.specials.filter(x=>x!==s);save();}});
+      put('specials',s);
+      toast('已儲存');return true;
+    },del:isNew?null:()=>remove('specials',s.id)});
 }
+/* 日記：各自只編輯自己那一欄，不會互相覆蓋 */
 function diaryForm(ds){
-  const d=S.diary[ds]||{a:'',b:''};
+  const d=S.diary[ds]||{},o=me==='a'?'b':'a';
   openSheet('共同日記 · '+nice(ds),
-    '<label>'+esc(S.settings.a)+'</label><textarea id="f-a" placeholder="今天想記下什麼？">'+esc(d.a||'')+'</textarea>'+
-    '<label>'+esc(S.settings.b)+'</label><textarea id="f-b" placeholder="今天想記下什麼？">'+esc(d.b||'')+'</textarea>',
+    '<label>'+esc(S.settings[o])+' 寫的</label><div class="ro note" style="color:var(--ink)">'+((d[o]||'').trim()?esc(d[o]):'<span class="sub">（還沒寫）</span>')+'</div>'+
+    '<label>'+esc(S.settings[me])+'（我）</label><textarea id="f-me" placeholder="今天想記下什麼？">'+esc(d[me]||'')+'</textarea>',
     {save(){
-      const a=val('f-a'),b=val('f-b');
-      if(a||b)S.diary[ds]={a,b};else delete S.diary[ds];
-      save();toast('已儲存');return true;
+      const t=val('f-me'),cur=S.diary[ds]||{};
+      if(!t&&!(cur[o]||'').trim())remove('diary',ds);
+      else w(F.setDoc(dref('diary',ds),{[me]:t,ts:Date.now()},{merge:true}));
+      toast('已儲存');return true;
     }});
 }
 function pinForm(){
   openSheet('密碼鎖','<label>新密碼（4–8 位數字；留空則關閉密碼鎖）</label>'+
     '<input id="f-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off">'+
-    '<div class="note" style="margin-top:8px">這是防止旁人隨手打開的簡易鎖。忘記密碼將無法進入，請務必記住。</div>',
+    '<div class="note" style="margin-top:8px">只鎖這支手機，防止旁人隨手打開。忘記密碼的話，清除瀏覽器網站資料後重新登入即可。</div>',
     {save(){
       const p=val('f-pin');
       if(p&&!/^\d{4,8}$/.test(p))return toast('請輸入 4–8 位數字');
-      S.settings.pin=p;save();toast(p?'已設定密碼':'已關閉密碼鎖');return true;
+      lsSet(PIN_KEY,p||null);toast(p?'已設定密碼':'已關閉密碼鎖');return true;
     }});
 }
 
-/* ---------- 備份 ---------- */
+/* ---------- 備份 / 匯入 ---------- */
 async function exportData(){
   const name='ourdays-backup-'+today()+'.json',text=JSON.stringify(S,null,1);
   try{
@@ -433,18 +481,38 @@ async function exportData(){
   document.body.appendChild(a);a.click();a.remove();
   toast('已匯出備份');
 }
+/* 把舊格式（localStorage / 備份檔）合併上傳；同 id 會覆蓋，日記只寫有內容的欄位 */
+async function uploadAll(j){
+  const ops=[];
+  ['records','bookings','specials'].forEach(n=>(j[n]||[]).forEach(o=>{if(o&&o.id&&o.date)ops.push([dref(n,String(o.id)),{...plain(o),by:o.by||me,ts:o.ts||Date.now()},false]);}));
+  Object.entries(j.diary||{}).forEach(([k,v])=>{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!v)return;
+    const x={};['a','b'].forEach(p=>{if((v[p]||'').trim())x[p]=v[p];});
+    if(Object.keys(x).length)ops.push([dref('diary',k),x,true]);
+  });
+  if(j.settings&&(j.settings.a||j.settings.b))ops.push([spaceRef(),{a:j.settings.a||S.settings.a,b:j.settings.b||S.settings.b},true]);
+  for(let i=0;i<ops.length;i+=400){
+    const b=F.writeBatch(db);
+    ops.slice(i,i+400).forEach(([r,d,m])=>m?b.set(r,d,{merge:true}):b.set(r,d));
+    await b.commit();
+  }
+  return ops.length;
+}
 function importData(file){
   const fr=new FileReader();
-  fr.onload=()=>{
-    try{
-      const j=JSON.parse(fr.result);
-      if(!j||!Array.isArray(j.records))throw 0;
-      const d=def();
-      S=Object.assign(d,j,{settings:Object.assign(d.settings,j.settings||{})});
-      save();toast('匯入完成');render();
-    }catch(e){toast('這不是有效的備份檔');}
+  fr.onload=async()=>{
+    let j;
+    try{j=JSON.parse(fr.result);if(!j||!Array.isArray(j.records))throw 0;}catch(e){return toast('這不是有效的備份檔');}
+    toast('上傳中…');
+    try{await uploadAll(j);toast('匯入完成');}catch(e){console.error(e);toast('匯入失敗，請確認網路');}
   };
   fr.readAsText(file);
+}
+async function migrate(){
+  const j=oldLocalData();if(!j)return;
+  toast('上傳中…');
+  try{await uploadAll(j);lsSet(MIG_KEY,'1');toast('舊資料已上傳');render();}
+  catch(e){console.error(e);toast('上傳失敗，請確認網路');}
 }
 
 /* ---------- 事件 ---------- */
@@ -458,14 +526,14 @@ document.addEventListener('click',e=>{
   switch(a){
     case 'tab':tab=el.dataset.v;if(tab==='cal'){const s=parse(sel);calY=s.getFullYear();calM=s.getMonth();}render();window.scrollTo(0,0);break;
     case 'add-rec':recForm({id:uid(),date:d,time:'',dur:0,note:''},true);break;
-    case 'edit-rec':recForm(find(S.records,id),false);break;
+    case 'edit-rec':{const r=find(S.records,id);if(r)recForm({...r},false);break;}
     case 'add-bk':bkForm({id:uid(),date:d,time:'',note:''},true);break;
-    case 'edit-bk':bkForm(find(S.bookings,id),false);break;
-    case 'done-bk':{const b=find(S.bookings,id);
-      recForm({id:uid(),date:b.date,time:b.time,dur:0,note:''},true,()=>{S.bookings=S.bookings.filter(x=>x!==b);});break;}
+    case 'edit-bk':{const b=find(S.bookings,id);if(b)bkForm({...b},false);break;}
+    case 'done-bk':{const b=find(S.bookings,id);if(!b)break;
+      recForm({id:uid(),date:b.date,time:b.time,dur:0,note:''},true,()=>remove('bookings',b.id));break;}
     case 'edit-diary':diaryForm(d);break;
     case 'add-sp':spForm({id:uid(),yearly:true},true);break;
-    case 'edit-sp':spForm(find(S.specials,id),false);break;
+    case 'edit-sp':{const s=find(S.specials,id);if(s)spForm({...s},false);break;}
     case 'pick-day':sel=d;if(el.dataset.go){tab='cal';const s=parse(d);calY=s.getFullYear();calM=s.getMonth();window.scrollTo(0,0);}render();showDay(d);break;
     case 'cal-prev':calM--;if(calM<0){calM=11;calY--;}render();break;
     case 'cal-next':calM++;if(calM>11){calM=0;calY++;}render();break;
@@ -474,6 +542,10 @@ document.addEventListener('click',e=>{
     case 'set-pin':pinForm();break;
     case 'export':exportData();break;
     case 'import':$('file').click();break;
+    case 'migrate':migrate();break;
+    case 'migrate-skip':lsSet(MIG_KEY,'1');render();break;
+    case 'logout':A.signOut(auth);break;
+    case 'login':login();break;
     case 'sheet-save':if(sheetCb&&sheetCb.save()===true)closeSheet();break;
     case 'sheet-close':closeSheet();break;
     case 'sheet-del':
@@ -485,22 +557,103 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset&&t.dataset.name){S.settings[t.dataset.name]=t.value.trim()||(t.dataset.name==='a'?'老公':'老婆');save();toast('已更新稱呼');}
+  if(t.dataset&&t.dataset.name){
+    const k=t.dataset.name,v=t.value.trim()||(k==='a'?'老公':'老婆');
+    w(F.setDoc(spaceRef(),{[k]:v},{merge:true}));toast('已更新稱呼');
+  }
   if(t.id==='file'&&t.files&&t.files[0]){importData(t.files[0]);t.value='';}
 });
 function unlock(){
-  if($('pinIn').value===S.settings.pin){$('lock').classList.remove('on');$('pinIn').value='';}
+  if($('pinIn').value===getPin()){$('lock').classList.remove('on');$('pinIn').value='';}
   else{$('pinIn').value='';toast('密碼不正確');}
 }
 $('pinIn').addEventListener('keydown',e=>{if(e.key==='Enter')unlock();});
-function lockIfNeeded(){if(S.settings.pin)$('lock').classList.add('on');}
+function lockIfNeeded(){if(getPin())$('lock').classList.add('on');}
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden)lockIfNeeded();
-  else if(!$('mask').classList.contains('on'))render();
+  else if(db&&me&&!$('mask').classList.contains('on'))render();
 });
+const setOffline=()=>$('offline').classList.toggle('on',!navigator.onLine);
+addEventListener('online',setOffline);addEventListener('offline',setOffline);setOffline();
 
-lockIfNeeded();
-render();
+/* ---------- 登入畫面 ---------- */
+const G_ICON='<svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+function gate(state,msg){
+  const g=$('gate');
+  if(state==='off'){g.classList.add('off');return;}
+  g.classList.remove('off');
+  const head='<div style="font-size:56px">🌭💞🙊</div><h1>我們的日子</h1>';
+  if(state==='loading')g.innerHTML='<div class="spin"></div><div class="sub">'+(msg||'載入中…')+'</div>';
+  else if(state==='setup')g.innerHTML=head+'<div class="note">尚未設定 Firebase。<br>請依照 README 的步驟，把設定貼到 <b>firebase-config.js</b>。</div>';
+  else if(state==='login'){
+    const inApp=/FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
+    g.innerHTML=head+'<div class="sub">兩個人的小天地，請先登入</div>'+
+      '<button class="gbtn" data-act="login">'+G_ICON+'使用 Google 帳號登入</button>'+
+      (inApp?'<div class="note" style="color:var(--rose)">偵測到 App 內建瀏覽器，Google 可能會拒絕登入。請點右上角選單，改用 Safari 或 Chrome 開啟。</div>':'')+
+      (msg?'<div class="note">'+esc(msg)+'</div>':'');
+  }
+  else if(state==='denied')g.innerHTML=head+'<div class="note">'+esc(myEmail)+'<br>這個帳號沒有權限使用。<br>請換成你們兩人設定好的 Google 帳號。</div>'+
+      '<button class="btn plain" data-act="logout">換一個帳號</button>';
+  else if(state==='error')g.innerHTML=head+'<div class="note">'+esc(msg||'發生錯誤')+'</div><button class="btn plain" onclick="location.reload()">重新整理</button>';
+}
+
+/* ---------- Firebase 連線 ---------- */
+let unsubs=[],got=new Set(),started=false;
+function stopListen(){unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
+function onErr(e){
+  console.error(e);
+  if(e.code==='permission-denied'){stopListen();gate('denied');}
+  else toast('同步中斷，請檢查網路');
+}
+function changed(n){
+  got.add(n);
+  if(got.size<5)return;
+  if(!started){started=true;gate('off');render();return;}
+  refresh();
+}
+function listen(){
+  stopListen();
+  ['records','bookings','specials'].forEach(n=>unsubs.push(F.onSnapshot(col(n),snap=>{
+    S[n]=snap.docs.map(d=>({...d.data(),id:d.id}));changed(n);},onErr)));
+  unsubs.push(F.onSnapshot(col('diary'),snap=>{
+    const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.diary=o;changed('diary');},onErr));
+  unsubs.push(F.onSnapshot(spaceRef(),snap=>{
+    S.settings=Object.assign(def().settings,snap.exists()?snap.data():{});changed('settings');},onErr));
+}
+async function login(){
+  const p=new A.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+  try{await A.signInWithPopup(auth,p);}
+  catch(e){
+    if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'){
+      try{await A.signInWithRedirect(auth,p);}catch(e2){gate('login','登入失敗：'+e2.code);}
+    }else if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request')gate('login','登入失敗：'+e.code);
+  }
+}
+async function boot(){
+  lockIfNeeded();
+  if(!firebaseConfig||!firebaseConfig.apiKey||/^YOUR/i.test(firebaseConfig.apiKey))return gate('setup');
+  try{
+    const [appM,authM,fsM]=await Promise.all([import(FB+'firebase-app.js'),import(FB+'firebase-auth.js'),import(FB+'firebase-firestore.js')]);
+    A=authM;F=fsM;
+    const app=appM.initializeApp(firebaseConfig);
+    auth=A.getAuth(app);
+    try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})});}
+    catch(e){db=F.getFirestore(app);}
+  }catch(e){console.error(e);return gate('error','無法載入，請確認網路連線後重新整理。');}
+  A.getRedirectResult(auth).catch(e=>console.warn(e));
+  const ma=String(MEMBERS.a||'').trim().toLowerCase(),mb=String(MEMBERS.b||'').trim().toLowerCase();
+  A.onAuthStateChanged(auth,u=>{
+    if(!u){stopListen();me=null;myEmail='';$('mask').classList.remove('on');gate('login');return;}
+    myEmail=(u.email||'').toLowerCase();
+    me=myEmail===ma?'a':myEmail===mb?'b':null;
+    if(!me){stopListen();return gate('denied');}
+    gate('loading','同步資料中…');
+    listen();
+  });
+}
+boot();
+
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
 </body>
 </html>

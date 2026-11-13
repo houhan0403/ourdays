@@ -22,6 +22,7 @@
 :root{
   --bg:#fff4f6;--bg2:#fdeef7;--card:#ffffff;--ink:#3a2530;--mute:#9a8490;--line:#f6dfe6;
   --rose:#e0527a;--rose-soft:#ffe3ea;--amber:#d08a1f;--amber-soft:#fff0d2;--plum:#8a5aa6;--shadow:0 6px 18px rgba(224,82,122,.10);
+  --g1:#ff8fab;--g2:#c58be0;--b1:#ffb347;--b2:#ff7fa3;--navsh:rgba(224,82,122,.08);
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#1c1517;--bg2:#221820;--shadow:none;--card:#2a2024;--ink:#f3e9ec;--mute:#a8969c;--line:#3d2f34;
@@ -29,10 +30,12 @@
 }}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
-html,body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg),var(--bg2)) fixed;color:var(--ink);
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--ink);
   font-family:-apple-system,system-ui,BlinkMacSystemFont,"SF Pro Text","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
   font-size:16px;line-height:1.5}
-body{padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 84px)}
+/* 畫面內容在 #scroller 裡捲動，body 本身不動，下方功能列就不會跟著跑 */
+#scroller{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 92px)}
 #view{max-width:560px;margin:0 auto}
 h1{font-size:30px;margin:0 0 2px;letter-spacing:.02em;font-weight:700}
 h2{font-size:15px;margin:22px 4px 8px;color:var(--ink);font-weight:700;letter-spacing:.04em}
@@ -55,8 +58,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .btn.sm{padding:6px 14px;min-height:34px;font-size:14px}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .btns .btn{flex:1}
-.banner{background:linear-gradient(135deg,#ffb347,#ff7fa3);color:#fff;border-radius:22px;padding:16px;margin:0 0 10px;box-shadow:var(--shadow)}
-.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#ff8fab,#c58be0);color:#fff;border-radius:26px;padding:20px 20px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.banner{background:linear-gradient(135deg,var(--b1),var(--b2));color:#fff;border-radius:22px;padding:16px;margin:0 0 10px;box-shadow:var(--shadow)}
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:26px;padding:20px 20px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
 .hero .sub{color:#fff;opacity:.9}
 .hero h1{font-size:34px}
 .hero .pair{display:inline-block;margin-top:8px;background:rgba(255,255,255,.25);border-radius:99px;padding:4px 14px;font-size:14px;font-weight:600}
@@ -70,7 +73,17 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
   display:flex;padding:6px 8px calc(env(safe-area-inset-bottom) + 6px);z-index:5}
 nav button{flex:1;padding:6px 0;font-size:11px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:2px}
-nav{border-radius:24px 24px 0 0;box-shadow:0 -4px 18px rgba(224,82,122,.08)}
+nav{border-radius:24px 24px 0 0;box-shadow:0 -4px 18px var(--navsh);transform:translateZ(0);transition:transform .2s}
+body.kb nav{transform:translateY(130%)}
+.funin{margin-top:12px}
+.funrow{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left}
+.funrow .t{white-space:pre-wrap;word-break:break-word}
+.themes{display:flex;flex-wrap:wrap;gap:12px}
+.th{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--mute);width:58px}
+.th i{display:block;width:40px;height:40px;border-radius:50%;box-shadow:0 0 0 1px var(--line)}
+.th.on i{box-shadow:0 0 0 3px var(--card),0 0 0 5px var(--ink)}
+.th.on{color:var(--ink);font-weight:600}
+input[type=color]{-webkit-appearance:auto;appearance:auto;padding:0;width:40px;height:40px;min-height:0;border-radius:50%;border:0;background:none}
 nav .ic{font-size:22px;line-height:1.2;padding:2px 12px;border-radius:99px;filter:grayscale(1);opacity:.55;transition:all .2s}
 nav button.on .ic{filter:none;opacity:1;background:var(--rose-soft);transform:scale(1.08)}
 nav button.on{color:var(--rose);font-weight:600}
@@ -100,7 +113,7 @@ nav button.on{color:var(--rose);font-weight:600}
 .stat .p{font-size:12px;color:var(--mute);margin-top:4px}
 .chart{display:flex;align-items:flex-end;gap:4px;height:150px;margin-top:8px}
 .bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:var(--mute)}
-.bar i{display:block;width:100%;background:linear-gradient(180deg,#ff8fab,var(--rose));border-radius:8px 8px 3px 3px;min-height:2px}
+.bar i{display:block;width:100%;background:linear-gradient(180deg,var(--g1),var(--rose));border-radius:8px 8px 3px 3px;min-height:2px}
 .bar i.zero{background:var(--line)}
 .bar em{font-style:normal;margin-bottom:2px;color:var(--ink);font-variant-numeric:tabular-nums}
 .bar span{margin-top:4px}
@@ -184,13 +197,13 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;display:block}
 </style>
 </head>
 <body>
-<div id="view"></div>
+<div id="scroller"><div id="view"></div></div>
 <div id="offline" class="offline">離線中 · 連線後會自動同步</div>
 
 <nav id="nav">
   <button data-act="tab" data-v="home"><span class="ic">💗</span>今天</button>
   <button data-act="tab" data-v="cal"><span class="ic">📅</span>行事曆</button>
-  <button data-act="tab" data-v="stats"><span class="ic">📊</span>統計</button>
+  <button data-act="tab" data-v="stats"><span class="ic">😈</span>壞壞專區</button>
   <button data-act="tab" data-v="hist"><span class="ic">📜</span>歷史紀錄</button>
   <button data-act="tab" data-v="set"><span class="ic">⚙️</span>設定</button>
 </nav>
@@ -210,7 +223,7 @@ const FB='https://www.gstatic.com/firebasejs/10.12.2/';
    msgs（有話要說）: 每則留言一筆 {date,by,text,ts}
    journal（心情小記）: 每天一筆 {a:{text,mood,ts,hist}, b:{...}}，各自只寫自己那欄
    history（歷史紀錄）: 每天一筆 {date,text,ts}，凌晨 3 點後自動產生前一天的文字 */
-const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:'',emja:'🍗',emjb:'🍉',histClr:''},records:[],bookings:[],specials:[],msgs:[],journal:{},history:{}});
+const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:'',emja:'🍗',emjb:'🍉',histClr:''},records:[],bookings:[],specials:[],msgs:[],fun:[],journal:{},history:{}});
 let S=def();
 let me=null,myEmail='';           // me = 'a' | 'b'，由 Google 登入的帳號決定
 let db=null,auth=null,F=null,A=null;
@@ -244,7 +257,8 @@ const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1800);}
 const DATE_RE=/^\d{4}-\d{2}-\d{2}$/;
 
-const recsOn=ds=>S.records.filter(r=>r.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+const recsOn=ds=>S.records.filter(r=>r.date===ds).sort((a,b)=>(a.ts||0)-(b.ts||0));
+const funOn=ds=>S.fun.filter(f=>f.date===ds&&(f.text||'').trim()).sort((a,b)=>(a.ts||0)-(b.ts||0));
 const bksOn=ds=>S.bookings.filter(r=>r.date===ds).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
 function allSpecials(){
   const st=S.settings,x=[];
@@ -262,7 +276,7 @@ const msgsOn=ds=>S.msgs.filter(m=>m.date===ds).sort((a,b)=>(a.ts||0)-(b.ts||0)||
 const jOn=ds=>S.journal[ds]||{};
 const jHas=(ds,k)=>{const e=jOn(ds)[k];return !!(e&&(e.text||'').trim());};
 const jDay=ds=>jHas(ds,'a')||jHas(ds,'b');
-const hasDiary=ds=>msgsOn(ds).length>0||jDay(ds);
+const hasDiary=ds=>msgsOn(ds).length>0||jDay(ds)||funOn(ds).length>0;
 const MOODS=['🥰','😊','😌','🤤','😴','😢','😠','🤒'];
 const stamp=ts=>{const d=new Date(ts);return (d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
 function journalHtml(ds){
@@ -305,6 +319,8 @@ function fitChats(){
 }
 
 /* ---------- 畫面狀態 ---------- */
+const SC=()=>$('scroller');
+let recY=new Date().getFullYear(),recM=new Date().getMonth();
 let tab='home',sel=today(),calY=new Date().getFullYear(),calM=new Date().getMonth(),statY=new Date().getFullYear();
 
 function render(){
@@ -320,8 +336,8 @@ function redraw(){
   const drafts={},ae=document.activeElement;let focusD=null,caret=0;
   document.querySelectorAll('.chatin textarea').forEach(t=>{if(t.value)drafts[t.closest('#sheet')?'s'+t.dataset.d:'v'+t.dataset.d]=t.value;});
   if(ae&&ae.closest&&ae.closest('.chatin')){focusD=(ae.closest('#sheet')?'s':'v')+ae.dataset.d;caret=ae.selectionStart||0;}
-  const y=scrollY;
-  render();scrollTo(0,y);
+  const y=SC().scrollTop;
+  render();SC().scrollTop=y;
   if($('mask').classList.contains('on')&&sheetDay&&!sheetCb){const st=$('sheet').scrollTop;showDay(sheetDay);$('sheet').scrollTop=st;}
   document.querySelectorAll('.chatin textarea').forEach(t=>{
     const k=(t.closest('#sheet')?'s':'v')+t.dataset.d;
@@ -338,48 +354,49 @@ function refresh(){
 }
 
 /* ---------- 單日內容（今天、行事曆共用） ---------- */
-function dayDetail(ds){
-  const recs=recsOn(ds),bks=bksOn(ds);
-  let h='';
-  if(bks.length){
-    h+='<h2>💌 預約</h2><div class="card">'+bks.map(b=>
-      '<div class="item"><div class="row"><span class="tag amber">'+esc(b.time||'時間未定')+'</span>'+
-      '<div class="grow note">'+esc(b.note||'兩人時光')+'</div></div>'+
-      '<div class="btns" style="margin-top:8px"><button class="btn sm plain" data-act="edit-bk" data-id="'+b.id+'">修改</button></div></div>').join('')+'</div>';
-  }
-  h+='<h2>💗 紀錄</h2><div class="card">';
-  h+=recs.length?recs.map(r=>
-    '<div class="item"><button class="row" style="width:100%;text-align:left" data-act="edit-rec" data-id="'+r.id+'">'+
-    '<span class="tag">'+esc(r.time||'—')+'</span><div class="grow"><b>'+(r.dur?r.dur+' 分鐘':'未記錄時間長度')+'</b>'+
-    (r.by?'<span class="sub"> · '+esc(S.settings[r.by])+'新增</span>':'')+
-    (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><span class="sub">'+(mineRec(r)?'›':'🔒')+'</span></button></div>').join('')
-    :'<div class="empty"><b>🌱</b>這天還沒有紀錄</div>';
-  h+='<div class="btns"><button class="btn" data-act="add-rec" data-d="'+ds+'">💗 新增紀錄</button>'+
-     '<button class="btn ghost" data-act="add-bk" data-d="'+ds+'">💌 預約</button></div></div>';
-  h+=journalHtml(ds);
+/* 今日趣事：可以記很多筆，自己的點一下可以修改或刪除 */
+function funHtml(ds){
+  const fs=funOn(ds);
+  return '<h2>🌟 今日趣事</h2><div class="card">'+(fs.length?fs.map(f=>{
+    const mine=f.by===me,body='<span>🌟</span><div class="grow"><div class="t">'+esc(f.text)+'</div>'+
+      '<div class="sub" style="font-size:12px">'+esc(S.settings[f.by]||'')+(f.ts?' · '+msgTime(f.ts,ds):'')+(f.edited?' · 已編輯':'')+'</div></div>';
+    return '<div class="item">'+(mine?'<button class="funrow" data-act="fun-edit" data-id="'+esc(f.id)+'">'+body+'<span class="sub">›</span></button>':'<div class="funrow">'+body+'</div>')+'</div>';
+  }).join(''):'<div class="empty"><b>🌟</b>'+(ds===today()?'今天有什麼好笑、可愛的事？記下來吧':'這天沒有記趣事')+'</div>')+
+  '<div class="chatin funin"><textarea rows="1" maxlength="1000" placeholder="新增一件趣事…" data-d="f:'+ds+'"></textarea>'+
+  '<button class="btn" data-act="fun-add" data-d="'+ds+'">新增</button></div></div>';
+}
+function chatSection(ds){
   const ms=msgsOn(ds);
-  h+='<h2>💬 有話要說</h2><div class="card">'+
+  return '<h2>💬 有話要說</h2><div class="card">'+
     (ms.length?(ms.length>CHAT_MAX?'<div class="chatmore">↑ 往上捲動看更早的留言（共 '+ms.length+' 則）</div>':'')+chatHtml(ds):'<div class="empty"><b>💬</b>這天還沒有留言，寫下第一句吧</div>')+
     '<div class="chatin"><textarea rows="1" maxlength="2000" placeholder="寫點什麼…" data-d="'+ds+'"></textarea>'+
     '<button class="btn" data-act="chat-send" data-d="'+ds+'">送出</button></div></div>';
-  return h;
 }
+function bookingHtml(ds){
+  const bks=bksOn(ds);
+  return '<h2>💌 預約</h2><div class="card">'+(bks.length?bks.map(b=>
+      '<div class="item"><div class="row"><span class="tag amber">'+esc(b.time||'時間未定')+'</span>'+
+      '<div class="grow note">'+esc(b.note||'兩人時光')+'</div>'+
+      '<button class="btn sm plain" style="flex:none" data-act="edit-bk" data-id="'+b.id+'">修改</button></div></div>').join('')
+    :'<div class="empty"><b>💤</b>這天還沒有預約</div>')+
+    '<div class="btns"><button class="btn ghost" data-act="add-bk" data-d="'+ds+'">💌 新增預約</button></div></div>';
+}
+/* 單日內容（今天、行事曆共用）：今日趣事 > 有話要說 > 共同日記 > 預約 */
+function dayDetail(ds){return funHtml(ds)+chatSection(ds)+journalHtml(ds)+bookingHtml(ds);}
 
 /* ---------- 歷年今日 ---------- */
 function onThisDay(ds){
   const md=ds.slice(5),y0=+ds.slice(0,4),years=new Set();
-  S.records.forEach(r=>{if(r.date.slice(5)===md&&r.date<ds)years.add(+r.date.slice(0,4));});
-  S.msgs.map(m=>m.date).concat(Object.keys(S.journal)).forEach(k=>{if(k&&k.slice(5)===md&&k<ds&&hasDiary(k))years.add(+k.slice(0,4));});
+  S.msgs.map(m=>m.date).concat(Object.keys(S.journal),S.fun.map(f=>f.date)).forEach(k=>{if(k&&k.slice(5)===md&&k<ds&&hasDiary(k))years.add(+k.slice(0,4));});
   let h='<h2>🕰️ 歷年今日</h2><div class="card">';
   const ys=[...years].sort((a,b)=>b-a);
   if(!ys.length)h+='<div class="empty"><b>🌈</b>往年的這一天還沒有記趣，寫下今天的，明年就看得到了。</div>';
   else h+=ys.map(y=>{
-    const d=y+'-'+md,recs=recsOn(d);
+    const d=y+'-'+md;
     let s='<div class="item"><div class="year">'+y+' 年（'+(y0-y)+' 年前）</div>';
-    if(recs.length)s+='<div><span class="tag">'+recs.length+' 次</span> <span class="sub">'+recs.map(r=>esc(r.time||'')+(r.dur?' '+r.dur+'分':'')).join('、')+'</span></div>'+
-      recs.filter(r=>r.note).map(r=>'<div class="note">'+esc(r.note)+'</div>').join('');
-    ['a','b'].forEach(k=>{if(jHas(d,k)){const e=jOn(d)[k];s+='<div class="note" style="margin-top:6px;color:var(--ink)"><b>📖 '+esc(S.settings[k])+(e.mood?' '+e.mood:'')+'：</b>'+esc(e.text)+'</div>';}});
+    funOn(d).forEach(f=>{s+='<div class="note" style="margin-top:4px;color:var(--ink)">🌟 '+esc(f.text)+'</div>';});
     msgsOn(d).forEach(m=>{s+='<div class="note" style="margin-top:6px"><b>'+esc(S.settings[m.by]||'')+(m.ts?' '+msgTime(m.ts,d):'')+'：</b>'+esc(m.text)+'</div>';});
+    ['a','b'].forEach(k=>{if(jHas(d,k)){const e=jOn(d)[k];s+='<div class="note" style="margin-top:6px;color:var(--ink)"><b>📖 '+esc(S.settings[k])+(e.mood?' '+e.mood:'')+'：</b>'+esc(e.text)+'</div>';}});
     return s+'</div>';
   }).join('');
   return h+'</div>';
@@ -424,12 +441,12 @@ function vCal(){
   for(let i=0;i<lead;i++)h+='<div></div>';
   for(let n=1;n<=dim;n++){
     const ds=calY+'-'+pad(calM+1)+'-'+pad(n);
-    const dots=(recsOn(ds).length?'<i class="em">💗</i>':'')+(bksOn(ds).length?'<i class="em">💌</i>':'')+
+    const dots=(bksOn(ds).length?'<i class="em">💌</i>':'')+
       (spOn(ds).length?'<i class="em">⭐</i>':'')+(hasDiary(ds)?'<i class="em">📝</i>':'');
     h+='<button class="day'+(ds===t?' today':'')+(ds===sel?' sel':'')+'" data-act="pick-day" data-d="'+ds+'">'+n+'<span class="dots">'+dots+'</span></button>';
   }
-  h+='</div><div class="legend"><span>💗 紀錄</span><span>💌 預約</span><span>⭐ 特別日</span><span>📝 日記／留言</span></div></div>';
-  h+='<div class="sub" style="text-align:center;margin-top:12px">點任一天，可查看當天的預約與紀錄，或新增內容</div>';
+  h+='</div><div class="legend"><span>💌 預約</span><span>⭐ 特別日</span><span>📝 趣事／留言／日記</span></div></div>';
+  h+='<div class="sub" style="text-align:center;margin-top:12px">點任一天，可查看當天的趣事、留言、日記與預約</div>';
   return h;
 }
 /* 點日期後跳出的當日視窗 */
@@ -439,7 +456,6 @@ function showDay(ds){
   let h='<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">'+nice(ds)+(ds===today()?'（今天）':'')+'</h3>'+
     '<button class="btn sm plain" data-act="sheet-close">關閉</button></div>';
   spOn(ds).forEach(s=>{h+='<div class="card" style="margin-top:10px"><span class="tag" style="background:var(--plum);color:#fff">⭐ 特別日</span> <b>'+esc(s.name)+'</b></div>';});
-  if(!bksOn(ds).length)h+='<h2>💌 預約</h2><div class="card"><div class="empty"><b>💤</b>這天沒有預約</div></div>';
   $('sheet').innerHTML=h+dayDetail(ds)+onThisDay(ds);
   $('mask').classList.add('on');
   fitChats();
@@ -451,6 +467,17 @@ function rangeStat(a,b){
   const A=fmt(a),B=fmt(b),r=S.records.filter(x=>x.date>=A&&x.date<=B);
   return {n:r.length,min:r.reduce((s,x)=>s+(+x.dur||0),0)};
 }
+function recMonthHtml(){
+  const ym=recY+'-'+pad(recM+1),list=S.records.filter(r=>(r.date||'').slice(0,7)===ym).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
+  let h='<div class="calhead" style="margin-top:14px"><button data-act="rec-prev" aria-label="上個月">‹</button><b>💗 '+recY+' 年 '+(recM+1)+' 月的紀錄</b><button data-act="rec-next" aria-label="下個月">›</button></div><div class="card">';
+  h+=list.length?list.map(r=>{const d=parse(r.date);
+    return '<div class="item"><button class="row" style="width:100%;text-align:left" data-act="edit-rec" data-id="'+r.id+'">'+
+    '<span class="tag">'+(d.getMonth()+1)+'/'+d.getDate()+' 週'+WD[d.getDay()]+'</span><div class="grow"><b>'+(r.dur?r.dur+' 分鐘':'未記錄時間長度')+'</b>'+
+    (r.by?'<span class="sub"> · '+esc(S.settings[r.by])+'新增</span>':'')+
+    (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><span class="sub">'+(mineRec(r)?'›':'🔒')+'</span></button></div>';}).join('')
+    :'<div class="empty"><b>🌱</b>這個月還沒有紀錄</div>';
+  return h+'<div class="btns"><button class="btn" data-act="add-rec" data-d="'+today()+'">💗 新增紀錄</button></div></div>';
+}
 function vStats(){
   const now=parse(today()),y=now.getFullYear(),m=now.getMonth(),q=Math.floor(m/3);
   const ws=addDays(now,-((now.getDay()+6)%7));
@@ -460,7 +487,8 @@ function vStats(){
     ['🍀','本季（Q'+(q+1)+'）',rangeStat(new Date(y,q*3,1),new Date(y,q*3+3,0)),rangeStat(new Date(y,q*3-3,1),new Date(y,q*3,0)),'上季'],
     ['🏆','今年',rangeStat(new Date(y,0,1),new Date(y,11,31)),rangeStat(new Date(y-1,0,1),new Date(y-1,11,31)),'去年']
   ];
-  let h='<h1 class="title"><span>📊</span>統計</h1><div class="sub" style="margin-bottom:14px">每週從週一起算</div><div class="stats">'+P.map(p=>
+  let h='<h1 class="title"><span>😈</span>壞壞專區</h1>'+recMonthHtml()+
+    '<h2>📊 統計</h2><div class="sub" style="margin:-4px 4px 10px">每週從週一起算</div><div class="stats">'+P.map(p=>
     '<div class="stat"><span class="e">'+p[0]+'</span><div class="l">'+p[1]+'</div><div class="n">'+p[2].n+'<small>次</small></div>'+
     '<div class="p">'+p[4]+' '+p[3].n+' 次'+(p[2].min?' · 共 '+p[2].min+' 分':'')+'</div></div>').join('')+'</div>';
 
@@ -485,10 +513,11 @@ function vStats(){
    最近 7 天若有人補寫或修改，會自動更新；更早的維持原樣。 */
 const emj=k=>(S.settings['emj'+k]||'').trim()||(k==='a'?'🍗':'🍉');
 function dayText(ds){
-  const ms=msgsOn(ds).filter(m=>(m.text||'').trim()),js=['a','b'].filter(k=>jHas(ds,k));
-  if(!ms.length&&!js.length)return '';
+  const fs=funOn(ds),ms=msgsOn(ds).filter(m=>(m.text||'').trim()),js=['a','b'].filter(k=>jHas(ds,k));
+  if(!fs.length&&!ms.length&&!js.length)return '';
   const d=parse(ds),lines=['🗓️'+(d.getMonth()+1)+'/'+d.getDate()];
-  ms.forEach(m=>lines.push(emj(m.by)+'：'+m.text.trim()));
+  fs.forEach(f=>lines.push('🌟'+f.text.trim()));
+  ms.forEach((m,i)=>lines.push((i+1)+'.'+emj(m.by)+'：'+m.text.trim()));
   if(js.length){lines.push('<日記>');js.forEach(k=>lines.push(emj(k)+'：'+jOn(ds)[k].text.trim()));}
   return lines.join('\n');
 }
@@ -496,7 +525,7 @@ let archBusy=false;
 async function archiveDue(){
   if(archBusy||!started||!me||!db)return;
   const cut=fmt(addDays(new Date(Date.now()-3*3600e3),-1)),recent=fmt(addDays(parse(cut),-6));
-  const dates=new Set(S.msgs.map(m=>m.date).concat(Object.keys(S.journal)));
+  const dates=new Set(S.msgs.map(m=>m.date).concat(Object.keys(S.journal),S.fun.map(f=>f.date)));
   const ops=[];
   dates.forEach(ds=>{
     if(!DATE_RE.test(ds)||ds>cut)return;
@@ -527,7 +556,7 @@ function histText(keys){
 let hq='';
 function vHist(){
   return '<h1 class="title"><span>📜</span>歷史紀錄</h1>'+
-    '<div class="sub" style="margin-bottom:6px">每天凌晨 3 點後，自動把前一天的「有話要說」和「共同日記」整理到這裡，一天接一天往下加。</div>'+
+    '<div class="sub" style="margin-bottom:6px">每天凌晨 3 點後，自動把前一天的「今日趣事」「有話要說」「共同日記」整理到這裡，一天接一天往下加。</div>'+
     '<div class="hsearch"><input id="hq" type="search" placeholder="🔍 輸入關鍵字搜尋" value="'+esc(hq)+'" autocomplete="off">'+
     '<button class="btn sm ghost" style="flex:none;min-height:44px" data-act="hist-dl">下載</button>'+
     '<button class="btn sm plain" style="flex:none;min-height:44px;color:var(--rose)" data-act="hist-clear">清除</button></div>'+
@@ -624,6 +653,11 @@ function vSet(){
     :'<div class="sub">還沒有。可以加入求婚日、第一次約會、寶寶生日等。</div>');
   h+='<div class="btns"><button class="btn ghost" data-act="add-sp">⭐ 新增其他日子</button></div>'+
     '<div class="note" style="margin-top:12px">生日和紀念日每年都會自動出現在行事曆（⭐），當天打開 App 首頁會提醒，60 天內的也會列在「即將到來」。</div></div>';
+  const cur=themeGet();
+  h+='<h2>🎨 色系</h2><div class="card"><div class="themes">'+THEMES.map(([n,c])=>
+      '<button class="th'+(cur===c?' on':'')+'" data-act="theme" data-v="'+c+'"><i style="background:linear-gradient(135deg,'+mixHex(c,'#ffffff',.35)+','+c+')"></i>'+n+'</button>').join('')+
+    '<label class="th'+(THEMES.every(t=>t[1]!==cur)?' on':'')+'"><input type="color" id="themeCustom" value="'+cur+'">自訂</label></div>'+
+    '<div class="note" style="margin-top:10px">只套用在這支手機，兩人可以各選喜歡的顏色。</div></div>';
   h+='<h2>🔐 這支手機的密碼鎖</h2><div class="card"><div class="note">每次打開 App 都需要輸入密碼。密碼只存在這支手機，兩人各自設定。</div>'+
     '<div class="btns"><button class="btn ghost" data-act="set-pin">變更密碼</button></div></div>';
   h+='<h2>💾 備份</h2><div class="card"><div class="note">資料存在雲端，兩人即時同步，只有你們兩個 Google 帳號能讀寫。也可以匯出一份備份檔自己保存；匯入會把備份檔內容合併進雲端（雲端已有的不會被覆蓋）。</div>'+
@@ -655,13 +689,12 @@ function recForm(r,isNew,after){
   const n=new Date();
   openSheet(isNew?'新增紀錄':'修改紀錄',
     '<div class="two"><div><label>日期</label><input id="f-date" type="date" value="'+r.date+'"></div>'+
-    '<div><label>開始時間</label><input id="f-time" type="time" value="'+(r.time||(isNew?pad(n.getHours())+':'+pad(n.getMinutes()):''))+'"></div></div>'+
-    '<label>時間長度（分鐘）</label><input id="f-dur" type="number" inputmode="numeric" min="0" max="999" placeholder="例如 30" value="'+(r.dur||'')+'">'+
+    '<div><label>時間長度（分鐘）</label><input id="f-dur" type="number" inputmode="numeric" min="0" max="999" placeholder="例如 30" value="'+(r.dur||'')+'"></div></div>'+
     '<label>備註（選填）</label><textarea id="f-note" placeholder="想記下的事…">'+esc(r.note||'')+'</textarea>',
     {save(){
       if(!val('f-date'))return toast('請選擇日期');
       if(!isNew&&!mineRec(r))return toast('不能修改別人的紀錄');
-      Object.assign(r,{date:val('f-date'),time:val('f-time'),dur:Math.max(0,parseInt(val('f-dur'),10)||0),note:val('f-note')});
+      Object.assign(r,{date:val('f-date'),dur:Math.max(0,parseInt(val('f-dur'),10)||0),note:val('f-note')});
       if(isNew)r.by=me;
       put('records',r);
       if(after)after();
@@ -672,7 +705,6 @@ function viewRec(r){
   sheetCb={};
   $('sheet').innerHTML='<h3>'+esc(S.settings[r.by])+'的紀錄</h3><div class="card">'+
     '<div class="item row"><div class="grow">日期</div><b>'+nice(r.date)+'</b></div>'+
-    '<div class="item row"><div class="grow">開始時間</div><b>'+esc(r.time||'—')+'</b></div>'+
     '<div class="item row"><div class="grow">時間長度</div><b>'+(r.dur?r.dur+' 分鐘':'—')+'</b></div>'+
     (r.note?'<div class="item"><div class="sub">備註</div><div class="note" style="color:var(--ink)">'+esc(r.note)+'</div></div>':'')+'</div>'+
     '<div class="note" style="text-align:center">🔒 這筆是'+esc(S.settings[r.by])+'新增的，只有本人可以修改或刪除。</div>'+
@@ -756,7 +788,7 @@ function pinForm(){
 function backupObj(){
   const diary={};
   S.msgs.forEach(m=>{(diary[m.date]=diary[m.date]||{msgs:[]}).msgs.push({id:m.id,by:m.by,text:m.text,ts:m.ts||0});});
-  return {settings:S.settings,records:S.records,bookings:S.bookings,specials:S.specials,diary:diary,journal:S.journal,history:S.history};
+  return {settings:S.settings,records:S.records,bookings:S.bookings,specials:S.specials,diary:diary,journal:S.journal,history:S.history,fun:S.fun};
 }
 async function exportData(){
   const name='ourdays-backup-'+today()+'.json',text=JSON.stringify(backupObj(),null,1);
@@ -782,6 +814,7 @@ async function uploadAll(j){
     list.forEach(m=>{if(m&&m.id&&(m.text||'').trim()&&(m.by==='a'||m.by==='b')&&!has(S.msgs,m.id))
       ops.push([dref('msgs',String(m.id)),{date:k,by:m.by,text:m.text,ts:m.ts||0},false]);});
   });
+  (Array.isArray(j.fun)?j.fun:[]).forEach(f=>{if(f&&f.id&&DATE_RE.test(f.date||'')&&(f.text||'').trim()&&!has(S.fun,f.id))ops.push([dref('fun',String(f.id)),{...plain(f)},false]);});
   Object.entries(j.journal||{}).forEach(([k,v])=>{
     if(!DATE_RE.test(k)||!v)return;
     const x={};
@@ -876,6 +909,55 @@ function msgEdit(id){
   setTimeout(()=>{const t=$('f-msg');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);}},50);
 }
 
+/* ---------- 今日趣事：修改／刪除自己的 ---------- */
+function funForm(id){
+  const f=S.fun.find(x=>x.id===id);if(!f||f.by!==me)return;
+  openSheet('修改趣事 · '+nice(f.date),'<textarea id="f-fun" maxlength="1000" style="min-height:120px">'+esc(f.text)+'</textarea>',
+    {save(){
+      const t=val('f-fun');
+      if(!t)return toast('內容不能是空的；要刪除請按下方「刪除」');
+      if(t!==f.text)w(F.setDoc(dref('fun',id),{text:t,edited:Date.now()},{merge:true}));
+      toast('已更新');return true;
+    },del:()=>remove('fun',id)});
+}
+
+/* ---------- 色系（每支手機自己選） ---------- */
+const THEMES=[['櫻花粉','#e0527a'],['蜜桃橘','#ec6a45'],['奶茶棕','#a8744f'],['抹茶綠','#4f9a5b'],['薄荷綠','#1f9e94'],['天空藍','#3b82d6'],['薰衣草','#8a5ad6'],['莓果紅','#c2185b'],['石墨灰','#5b6272']];
+const THEME_KEY='ourdays.theme',DEF_THEME='#e0527a';
+const themeGet=()=>{const v=lsGet(THEME_KEY);return /^#[0-9a-f]{6}$/i.test(v||'')?v.toLowerCase():DEF_THEME;};
+function hex2rgb(h){return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16));}
+function rgb2hex(a){return '#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');}
+function mixHex(a,b,t){const x=hex2rgb(a),y=hex2rgb(b);return rgb2hex(x.map((v,i)=>v+(y[i]-v)*t));}
+function hex2hsl(h){let [r,g,b]=hex2rgb(h).map(v=>v/255);const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let H=0,S2=0,L=(mx+mn)/2;
+  if(mx!==mn){const d=mx-mn;S2=L>.5?d/(2-mx-mn):d/(mx+mn);H=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;H*=60;}return [H,S2,L];}
+function hsl2hex(H,S2,L){H=((H%360)+360)%360;const k=n=>(n+H/30)%12,a=S2*Math.min(L,1-L),f=n=>L-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));return rgb2hex([f(0),f(8),f(4)].map(v=>v*255));}
+function themeApply(){
+  const old=$('themeCss');if(old)old.remove();
+  const c=themeGet();
+  const meta=document.querySelectorAll('meta[name=theme-color]');
+  if(c===DEF_THEME){if(meta[0])meta[0].content='#fbf6f3';return;}   // 櫻花粉 = 原本的配色
+  let [h,s2,l]=hex2hsl(c);l=Math.max(.32,Math.min(l,.55));s2=Math.max(s2,.25);
+  const base=hsl2hex(h,s2,l),sh=(dh,ss,ll)=>hsl2hex(h+dh,ss,ll),rgb=hex2rgb(base).join(','),W='#ffffff',D='#161416';
+  const v={rose:base,'rose-soft':mixHex(base,W,.86),bg:mixHex(base,W,.955),bg2:mixHex(sh(30,s2,l),W,.94),line:mixHex(base,W,.84),
+    plum:sh(40,Math.min(s2,.5),Math.min(l,.42)),ink:mixHex(base,'#1f1a1d',.85),mute:mixHex(base,'#8c8689',.78),
+    g1:mixHex(base,W,.35),g2:mixHex(sh(45,s2,l),W,.25),b1:mixHex(sh(-35,Math.max(s2,.7),.6),W,.1),b2:mixHex(base,W,.3),
+    navsh:'rgba('+rgb+',.08)',shadow:'0 6px 18px rgba('+rgb+',.10)'};
+  const dk={rose:mixHex(base,W,.2),'rose-soft':mixHex(base,D,.72),bg:mixHex(base,D,.9),bg2:mixHex(sh(30,s2,l),D,.88),card:mixHex(base,'#211d20',.88),
+    line:mixHex(base,'#211d20',.75),plum:mixHex(sh(40,s2,l),W,.45),ink:'#f2eef0',mute:mixHex(base,'#a39da0',.82),navsh:'rgba(0,0,0,.3)',shadow:'none'};
+  const css=o=>Object.entries(o).map(([k,x])=>'--'+k+':'+x).join(';');
+  const st=document.createElement('style');st.id='themeCss';
+  st.textContent=':root{'+css(v)+'}@media (prefers-color-scheme:dark){:root{'+css(dk)+'}}';
+  document.head.appendChild(st);
+  if(meta[0])meta[0].content=v.bg;
+}
+function themeSet(c){lsSet(THEME_KEY,c&&c.toLowerCase()!==DEF_THEME?c.toLowerCase():null);themeApply();toast('已換色系');}
+themeApply();
+
+/* ---------- 打字時把下方功能列收起來，避免被鍵盤推著跑 ---------- */
+const isTyping=el=>!!el&&(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&!/^(checkbox|radio|range|color|file|button)$/.test(el.type)));
+document.addEventListener('focusin',e=>{if(isTyping(e.target))document.body.classList.add('kb');});
+document.addEventListener('focusout',()=>setTimeout(()=>{if(!isTyping(document.activeElement))document.body.classList.remove('kb');},80));
+
 /* ---------- 事件 ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
 let delArmed=false,delMsg='',delAt=0;
@@ -885,7 +967,7 @@ document.addEventListener('click',e=>{
   const a=el.dataset.act,id=el.dataset.id,d=el.dataset.d;
   if(a!=='sheet-del')delArmed=false;
   switch(a){
-    case 'tab':tab=el.dataset.v;if(tab==='cal'){const s=parse(sel);calY=s.getFullYear();calM=s.getMonth();}render();window.scrollTo(0,tab==='hist'&&!hq.trim()?document.body.scrollHeight:0);break;
+    case 'tab':tab=el.dataset.v;if(tab==='cal'){const s=parse(sel);calY=s.getFullYear();calM=s.getMonth();}render();SC().scrollTop=tab==='hist'&&!hq.trim()?SC().scrollHeight:0;break;
     case 'add-rec':recForm({id:uid(),date:d,time:'',dur:0,note:''},true);break;
     case 'edit-rec':{const r=find(S.records,id);if(!r)break;if(mineRec(r))recForm({...r},false);else viewRec(r);break;}
     case 'add-bk':bkForm({id:uid(),date:d,time:'',note:''},true);break;
@@ -906,10 +988,20 @@ document.addEventListener('click',e=>{
     case 'msg-del-ok':{const m=S.msgs.find(x=>x.id===id);if(m&&m.by===me){remove('msgs',id);toast('已刪除');}closeSheet();break;}
     case 'add-sp':spForm({id:uid(),yearly:true},true);break;
     case 'edit-sp':{const s=find(S.specials,id);if(s)spForm({...s},false);break;}
-    case 'pick-day':sel=d;if(el.dataset.go){tab='cal';const s=parse(d);calY=s.getFullYear();calM=s.getMonth();window.scrollTo(0,0);}render();showDay(d);break;
+    case 'pick-day':sel=d;if(el.dataset.go){tab='cal';const s=parse(d);calY=s.getFullYear();calM=s.getMonth();SC().scrollTop=0;}render();showDay(d);break;
     case 'cal-prev':calM--;if(calM<0){calM=11;calY--;}render();break;
     case 'cal-next':calM++;if(calM>11){calM=0;calY++;}render();break;
     case 'st-prev':statY--;render();break;
+    case 'rec-prev':recM--;if(recM<0){recM=11;recY--;}render();break;
+    case 'rec-next':recM++;if(recM>11){recM=0;recY++;}render();break;
+    case 'fun-add':{
+      const ta=el.closest('.chatin').querySelector('textarea'),t=ta.value.trim();
+      if(!t)break;
+      ta.value='';ta.style.height='44px';
+      const lastF=S.fun.filter(f=>f.date===d).reduce((x,f)=>Math.max(x,f.ts||0),0);
+      w(F.setDoc(dref('fun',uid()),{date:d,by:me,text:t,ts:Math.max(Date.now(),lastF+1)}));toast('已新增 🌟');break;}
+    case 'fun-edit':funForm(id);break;
+    case 'theme':themeSet(el.dataset.v);render();break;
     case 'st-next':statY++;render();break;
     case 'set-pin':pinForm();break;
     case 'export':exportData();break;
@@ -952,6 +1044,7 @@ document.addEventListener('change',e=>{
   if(t.dataset&&t.dataset.name){
     const k=t.dataset.name,v=t.value.trim()||(k==='a'?'老公':'老婆');setSettings({[k]:v});toast('已更新稱呼');}
   if(t.id==='file'&&t.files&&t.files[0]){importData(t.files[0]);t.value='';}
+  if(t.id==='themeCustom'){themeSet(t.value);render();}
 });
 
 /* ---------- 密碼鎖：第一次打開強制設定 ---------- */
@@ -1047,7 +1140,7 @@ function gate(state,msg){
 }
 
 /* ---------- Firebase 連線 ---------- */
-const LISTENERS=8;
+const LISTENERS=9;
 let unsubs=[],got=new Set(),started=false;
 function stopListen(){unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
 function onErr(e){
@@ -1063,7 +1156,7 @@ function changed(n){
 }
 function listen(){
   stopListen();
-  ['records','bookings','specials','msgs'].forEach(n=>unsubs.push(F.onSnapshot(col(n),snap=>{
+  ['records','bookings','specials','msgs','fun'].forEach(n=>unsubs.push(F.onSnapshot(col(n),snap=>{
     S[n]=snap.docs.map(d=>({...d.data(),id:d.id}));changed(n);},onErr)));
   unsubs.push(F.onSnapshot(col('journal'),snap=>{
     const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.journal=o;changed('journal');},onErr));

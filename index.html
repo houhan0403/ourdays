@@ -76,6 +76,28 @@ nav button{flex:1;padding:6px 0;font-size:11px;color:var(--mute);display:flex;fl
 nav{border-radius:24px 24px 0 0;box-shadow:0 -4px 18px var(--navsh);transform:translateZ(0);transition:transform .2s}
 body.kb nav{transform:translateY(130%)}
 .funin{margin-top:12px}
+.pokecard{display:flex;align-items:center;gap:12px}
+.pokecard .grow{min-width:0}
+.pokebtn{position:relative;flex:none;width:76px;height:76px;border-radius:50%;font-size:38px;background:var(--rose-soft);box-shadow:inset 0 0 0 2px var(--rose);transition:transform .12s}
+.pokebtn:active{transform:scale(.88)}
+.pokecard .tt{font-weight:700;font-size:17px}
+.pokenew{display:inline-block;margin-top:4px;background:var(--rose);color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px}
+.flyheart{position:fixed;pointer-events:none;z-index:45;font-size:26px;animation:fly 1s ease-out forwards}
+@keyframes fly{from{opacity:1;transform:translate(-50%,-50%) scale(.6)}to{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% - 120px)) scale(1.4)}}
+#pokeOv{position:fixed;inset:0;z-index:28;pointer-events:none;overflow:hidden}
+.bnc{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 90px);font-size:30px;line-height:1;opacity:0;animation:bnc 2.4s cubic-bezier(.3,.7,.4,1) forwards;filter:drop-shadow(0 3px 6px rgba(0,0,0,.15))}
+@keyframes bnc{0%{opacity:0;transform:translateY(40px) scale(.5)}12%{opacity:.95;transform:translateY(calc(var(--h)*-1)) scale(1.1)}
+ 28%{transform:translateY(0) scale(.95,1.05)}40%{transform:translateY(calc(var(--h)*-.45)) scale(1)}55%{transform:translateY(0)}
+ 65%{transform:translateY(calc(var(--h)*-.18))}78%{opacity:.9;transform:translateY(0)}100%{opacity:0;transform:translateY(0) scale(.9)}}
+.pkpick{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding:2px 2px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pkpick::-webkit-scrollbar{display:none}
+.pk{flex:none;width:36px;height:36px;border-radius:50%;font-size:20px;background:var(--bg2);border:1px solid var(--line)}
+.pk.on{background:var(--rose-soft);border-color:var(--rose);box-shadow:0 0 0 2px var(--rose-soft)}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg) scale(1.1)}75%{transform:rotate(14deg) scale(1.1)}}
+.sw2{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.sw2:last-of-type{border-bottom:0}
+.sw2 .grow{flex:1}
 .reclist{max-height:330px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-right:-6px;padding-right:6px}
 .reclist .item:last-child{border-bottom:0}
 .funrow{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left}
@@ -212,6 +234,7 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;display:block}
 
 <div id="mask"><div id="sheet"></div></div>
 <div id="toast"></div>
+<div id="pokeOv"></div>
 <div id="gate"><div class="spin"></div><div class="sub">載入中…</div></div>
 <div id="lock"></div>
 
@@ -225,7 +248,7 @@ const FB='https://www.gstatic.com/firebasejs/10.12.2/';
    msgs（有話要說）: 每則留言一筆 {date,by,text,ts}
    journal（心情小記）: 每天一筆 {a:{text,mood,ts,hist}, b:{...}}，各自只寫自己那欄
    history（歷史紀錄）: 每天一筆 {date,text,ts}，凌晨 3 點後自動產生前一天的文字 */
-const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:'',emja:'🍗',emjb:'🍉',histClr:''},records:[],bookings:[],specials:[],msgs:[],fun:[],journal:{},history:{}});
+const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:'',emja:'🍗',emjb:'🍉',histClr:''},records:[],bookings:[],specials:[],msgs:[],fun:[],pokes:[],pokeLog:{},journal:{},history:{}});
 let S=def();
 let me=null,myEmail='';           // me = 'a' | 'b'，由 Google 登入的帳號決定
 let db=null,auth=null,F=null,A=null;
@@ -422,7 +445,7 @@ function vHome(){
     const n=s.yearly&&!s.bday?(+t.slice(0,4))-(+s.date.slice(0,4)):0;
     h+='<div class="banner"><b>🎉 今天是「'+esc(s.name)+'」'+(n>0?' · 滿 '+n+' 年':'')+'</b><span>'+(s.bday?'生日快樂！今天很適合安排一段只屬於兩人的親密時光。':'特別的日子，很適合安排一段只屬於兩人的親密時光。')+'</span></div>';
   });
-  h+=dayDetail(t);
+  h+=pokeCard()+dayDetail(t);
   return h;
 }
 /* 即將到來（行事曆頁） */
@@ -673,6 +696,10 @@ function vSet(){
       '<button class="th'+(cur===c?' on':'')+'" data-act="theme" data-v="'+c+'"><i style="background:linear-gradient(135deg,'+mixHex(c,'#ffffff',.35)+','+c+')"></i>'+n+'</button>').join('')+
     '<label class="th'+(THEMES.every(t=>t[1]!==cur)?' on':'')+'"><input type="color" id="themeCustom" value="'+cur+'">自訂</label></div>'+
     '<div class="note" style="margin-top:10px">只套用在這支手機，兩人可以各選喜歡的顏色。</div></div>';
+  h+='<h2>💗 戳一下</h2><div class="card">'+
+    '<label class="sw2" style="margin:0"><span class="grow" style="color:var(--ink);font-size:15px">被戳時顯示彈跳動畫<div class="sub" style="font-size:12px">對方戳的符號會在畫面上小小彈跳；關掉的話，只會在卡片上顯示「戳了你幾下」</div></span><input type="checkbox" id="pkNotify"'+(pokeOpt('notify')?' checked':'')+'></label>'+
+    '<label class="sw2" style="margin:0"><span class="grow" style="color:var(--ink);font-size:15px">被戳時震動<div class="sub" style="font-size:12px">Android 手機才有效，iPhone 不支援網頁震動</div></span><input type="checkbox" id="pkVibe"'+(pokeOpt('vibe')?' checked':'')+'></label>'+
+    '<div class="note" style="margin-top:8px">只套用在這支手機。App 關著時不會跳通知，下次打開才會看到。</div></div>';
   h+='<h2>🔐 這支手機的密碼鎖</h2><div class="card"><div class="note">每次打開 App 都需要輸入密碼。密碼只存在這支手機，兩人各自設定。</div>'+
     '<div class="btns"><button class="btn ghost" data-act="set-pin">變更密碼</button></div></div>';
   h+='<h2>💾 備份</h2><div class="card"><div class="note">資料存在雲端，兩人即時同步，只有你們兩個 Google 帳號能讀寫。也可以匯出一份備份檔自己保存；匯入會把備份檔內容合併進雲端（雲端已有的不會被覆蓋）。</div>'+
@@ -976,6 +1003,63 @@ const isTyping=el=>!!el&&(el.tagName==='TEXTAREA'||(el.tagName==='INPUT'&&!/^(ch
 document.addEventListener('focusin',e=>{if(isTyping(e.target))document.body.classList.add('kb');});
 document.addEventListener('focusout',()=>setTimeout(()=>{if(!isTyping(document.activeElement))document.body.classList.remove('kb');},80));
 
+/* ---------- 戳一下 ----------
+   pokes：還沒被看到的戳戳（每戳一下一筆，對方看到後刪掉）
+   pokeLog：每天的次數 {a:n,b:n}，用來顯示「今天戳了幾下」 */
+const pokeOpt=k=>lsGet('ourdays.poke.'+k)!=='0';
+const partner=()=>me==='a'?'b':'a';
+const myPokes=()=>S.pokes.filter(x=>x.to===me);
+const POKE_EMOJIS=['👉','😘','💋','🤗','🫶','🥰','😈','🔥','🍑','🐻','🐰','🌭','🙊','🍗','🍉'];
+const pokeEmoji=()=>lsGet('ourdays.poke.emoji')||'👉';
+function pokeCard(){
+  const ot=partner(),lg=S.pokeLog[today()]||{},n=myPokes().length,cur=pokeEmoji();
+  const list=POKE_EMOJIS.includes(cur)?POKE_EMOJIS:[cur].concat(POKE_EMOJIS);
+  return '<div class="card pokecard" style="margin-top:2px"><button class="pokebtn" data-act="poke" aria-label="戳一下">'+esc(cur)+'</button>'+
+    '<div class="grow"><div class="tt">戳一下'+esc(S.settings[ot])+'</div>'+
+    '<div class="sub">今天你戳了 '+(lg[me]||0)+' 下 · '+esc(S.settings[ot])+'戳了你 '+(lg[ot]||0)+' 下</div>'+
+    (n&&!pokeOpt('notify')?'<button class="pokenew" data-act="poke-seen">'+emj(ot)+' 戳了你 '+n+' 下・知道了</button>':'')+
+    '<div class="pkpick">'+list.map(e=>'<button class="pk'+(e===cur?' on':'')+'" data-act="pk-pick" data-v="'+esc(e)+'">'+esc(e)+'</button>').join('')+
+    '<button class="pk" data-act="pk-custom" aria-label="自訂符號">✏️</button></div></div></div>';
+}
+function pokeCustom(){
+  openSheet('自訂戳戳符號','<label>輸入一個 emoji 或符號</label><input id="f-pk" maxlength="8" value="'+esc(pokeEmoji())+'" style="font-size:28px;text-align:center;max-width:140px">',
+    {save(){const v=val('f-pk');if(!v)return toast('請輸入符號');lsSet('ourdays.poke.emoji',v);toast('之後就用 '+v+' 戳');return true;}});
+}
+let lastPoke=0;
+function doPoke(btn){
+  const now=Date.now();if(now-lastPoke<250)return;lastPoke=now;
+  const ot=partner();
+  const em=pokeEmoji();
+  w(F.setDoc(dref('pokes',uid()),{from:me,to:ot,ts:now,emoji:em}));
+  w(F.setDoc(dref('pokeLog',today()),{[me]:F.increment(1)},{merge:true}));
+  if(btn){const r=btn.getBoundingClientRect();
+    for(let i=0;i<3;i++){const h=document.createElement('div');h.className='flyheart';h.textContent=i===1?em:['💗','','💕'][i];
+      h.style.left=(r.left+r.width/2)+'px';h.style.top=(r.top+r.height/2)+'px';h.style.setProperty('--dx',((i-1)*40)+'px');h.style.animationDelay=(i*.08)+'s';
+      document.body.appendChild(h);setTimeout(()=>h.remove(),1300);}}
+}
+function pokesSeen(){
+  const mine=myPokes();if(!mine.length)return;
+  const b=F.writeBatch(db);mine.forEach(x=>b.delete(dref('pokes',x.id)));w(b.commit());
+}
+/* 被戳：對方選的符號在畫面上小小彈跳一下，播完就算看過了（不跳視窗） */
+let pokeBusy=false;
+function checkPokes(){
+  const mine=myPokes();
+  if(!mine.length||pokeBusy)return;
+  if(!pokeOpt('notify')||!me||!started||document.hidden||$('lock').classList.contains('on'))return;   // 偽裝畫面、密碼鎖還沒解開時不播
+  pokeBusy=true;
+  const ov=$('pokeOv'),list=mine.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).slice(-15);
+  list.forEach((x,i)=>{
+    const e=document.createElement('div');e.className='bnc';e.textContent=x.emoji||'👉';
+    e.style.left=(8+Math.random()*78)+'%';e.style.setProperty('--h',(140+Math.random()*180)+'px');
+    e.style.animationDelay=(i*.18)+'s';e.style.fontSize=(26+Math.random()*12)+'px';
+    ov.appendChild(e);setTimeout(()=>e.remove(),2600+i*180);
+  });
+  if(pokeOpt('vibe')){try{navigator.vibrate&&navigator.vibrate([50,40,50]);}catch(e){}}
+  pokesSeen();
+  setTimeout(()=>{pokeBusy=false;checkPokes();},800);
+}
+
 /* ---------- 事件 ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
 let delArmed=false,delMsg='',delAt=0;
@@ -1020,6 +1104,10 @@ document.addEventListener('click',e=>{
       const lastF=S.fun.filter(f=>f.date===d).reduce((x,f)=>Math.max(x,f.ts||0),0);
       w(F.setDoc(dref('fun',uid()),{date:d,by:me,text:t,ts:Math.max(Date.now(),lastF+1)}));toast('已新增 🌟');break;}
     case 'fun-edit':funForm(id);break;
+    case 'poke':doPoke(el);break;
+    case 'poke-seen':pokesSeen();break;
+    case 'pk-pick':lsSet('ourdays.poke.emoji',el.dataset.v);render();break;
+    case 'pk-custom':pokeCustom();break;
     case 'theme':themeSet(el.dataset.v);render();break;
     case 'st-next':statY++;render();break;
     case 'set-pin':pinForm();break;
@@ -1064,6 +1152,7 @@ document.addEventListener('change',e=>{
     const k=t.dataset.name,v=t.value.trim()||(k==='a'?'老公':'老婆');setSettings({[k]:v});toast('已更新稱呼');}
   if(t.id==='file'&&t.files&&t.files[0]){importData(t.files[0]);t.value='';}
   if(t.id==='themeCustom'){themeSet(t.value);render();}
+  if(t.id==='pkNotify'||t.id==='pkVibe'){lsSet('ourdays.poke.'+(t.id==='pkNotify'?'notify':'vibe'),t.checked?null:'0');toast(t.checked?'已開啟':'已關閉');render();checkPokes();}
 });
 
 /* ---------- 密碼鎖：第一次打開強制設定 ---------- */
@@ -1111,7 +1200,7 @@ function showLock(mode){
     '<div class="sub">請輸入密碼</div>'+pinInput('pinIn','')+'<button class="btn" data-act="unlock">解鎖</button>');
   $('lock').classList.add('on');
 }
-function hideLock(){$('lock').classList.remove('mq');$('lock').style.background='';lockMode='';$('lock').classList.remove('on');$('lock').innerHTML='';render();}
+function hideLock(){$('lock').classList.remove('mq');$('lock').style.background='';lockMode='';$('lock').classList.remove('on');$('lock').innerHTML='';render();checkPokes();}
 function pinSetup(){
   const p=$('pin1').value.trim();
   if(!/^\d{4,8}$/.test(p))return toast('請輸入 4–8 位數字');
@@ -1133,7 +1222,7 @@ function lockIfNeeded(){
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden)lockIfNeeded();
-  else{archiveDue();if(me&&started&&!$('mask').classList.contains('on'))render();}
+  else{archiveDue();if(me&&started&&!$('mask').classList.contains('on'))render();checkPokes();}
 });
 const setOffline=()=>$('offline').classList.toggle('on',!navigator.onLine);
 addEventListener('online',setOffline);addEventListener('offline',setOffline);setOffline();
@@ -1159,7 +1248,7 @@ function gate(state,msg){
 }
 
 /* ---------- Firebase 連線 ---------- */
-const LISTENERS=9;
+const LISTENERS=11;
 let unsubs=[],got=new Set(),started=false;
 function stopListen(){unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
 function onErr(e){
@@ -1170,7 +1259,8 @@ function onErr(e){
 function changed(n){
   got.add(n);
   if(got.size<LISTENERS)return;
-  if(!started){started=true;gate('off');render();archiveDue();return;}
+  if(!started){started=true;gate('off');render();archiveDue();checkPokes();return;}
+  if(n==='pokes')checkPokes();
   refresh();
 }
 function listen(){
@@ -1182,6 +1272,9 @@ function listen(){
   unsubs.push(F.onSnapshot(col('history'),snap=>{
     const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.history=o;changed('history');},onErr));
   unsubs.push(F.onSnapshot(col('diary'),snap=>{convertLegacyDiary(snap.docs);changed('diary');},onErr));
+  unsubs.push(F.onSnapshot(col('pokes'),snap=>{S.pokes=snap.docs.map(d=>({...d.data(),id:d.id}));changed('pokes');},onErr));
+  unsubs.push(F.onSnapshot(F.query(col('pokeLog'),F.where(F.documentId(),'>=',fmt(addDays(new Date(),-1)))),snap=>{
+    const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.pokeLog=o;changed('pokeLog');},onErr));
   unsubs.push(F.onSnapshot(spaceRef(),snap=>{
     S.settings=Object.assign(def().settings,snap.exists()?snap.data():{});changed('settings');},onErr));
 }

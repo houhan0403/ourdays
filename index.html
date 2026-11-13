@@ -80,6 +80,12 @@ nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px
 nav button{flex:1;padding:6px 0;font-size:11px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:2px}
 nav{border-radius:24px 24px 0 0;box-shadow:0 -4px 18px var(--navsh);transform:translateZ(0);transition:transform .2s}
 body.kb nav{transform:translateY(130%)}
+#hideBtn{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom) + 76px);z-index:6;width:46px;height:46px;border-radius:50%;
+  font-size:24px;background:var(--card);border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.15);display:none;transition:transform .2s,opacity .2s}
+body.app #hideBtn{display:block}
+body.kb #hideBtn{opacity:0;pointer-events:none}
+#hideBtn:active{transform:scale(.88)}
+.hero .deco{cursor:pointer;z-index:2;padding:4px}
 .funin{margin-top:12px}
 .pokecard{display:flex;align-items:center;gap:12px}
 .pokecard .grow{min-width:0}
@@ -89,8 +95,6 @@ body.kb nav{transform:translateY(130%)}
 .pokenew{display:inline-block;margin-top:4px;background:var(--rose);color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:99px}
 .flyheart{position:fixed;pointer-events:none;z-index:45;font-size:26px;animation:fly 1s ease-out forwards}
 @keyframes fly{from{opacity:1;transform:translate(-50%,-50%) scale(.6)}to{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% - 120px)) scale(1.4)}}
-#shield{position:fixed;inset:0;z-index:99;background:#000;display:none}
-#shield.on{display:block}
 #pokeOv{position:fixed;inset:0;z-index:28;pointer-events:none;overflow:hidden}
 .bnc{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 90px);font-size:30px;line-height:1;opacity:0;animation:bnc 2.4s cubic-bezier(.3,.7,.4,1) forwards;filter:drop-shadow(0 3px 6px rgba(0,0,0,.15))}
 @keyframes bnc{0%{opacity:0;transform:translateY(40px) scale(.5)}12%{opacity:.95;transform:translateY(calc(var(--h)*-1)) scale(1.1)}
@@ -99,6 +103,7 @@ body.kb nav{transform:translateY(130%)}
 .pkpick{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding:2px 2px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .pkpick::-webkit-scrollbar{display:none}
 .pk{flex:none;width:36px;height:36px;border-radius:50%;font-size:20px;background:var(--bg2);border:1px solid var(--line)}
+.pk[data-on]{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700}
 .pk.on{background:var(--rose-soft);border-color:var(--rose);box-shadow:0 0 0 2px var(--rose-soft)}
 @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg) scale(1.1)}75%{transform:rotate(14deg) scale(1.1)}}
@@ -231,6 +236,7 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;display:block}
 <div id="scroller"><div id="view"></div></div>
 <div id="offline" class="offline">離線中 · 連線後會自動同步</div>
 
+<button id="hideBtn" data-act="hide" aria-label="隱藏">🙈</button>
 <nav id="nav">
   <button data-act="tab" data-v="home"><span class="ic">💗</span>今天</button>
   <button data-act="tab" data-v="cal"><span class="ic">📅</span>行事曆</button>
@@ -242,20 +248,6 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;display:block}
 <div id="mask"><div id="sheet"></div></div>
 <div id="toast"></div>
 <div id="pokeOv"></div>
-<div id="shield"></div>
-<script>
-/* 防偷看：App 一失去焦點（滑到多工畫面、切到別的 App、拉下通知中心）就先蓋黑，
-   讓多工畫面的預覽圖看不到內容；回來時再拿掉（接著會看到跑馬燈偽裝畫面）。
-   這段用一般 script 寫在最前面，越早執行越容易趕在 iPhone 拍預覽圖之前。 */
-(function(){
-  var s=document.getElementById('shield');
-  function on(){s.className='on';}
-  function off(){setTimeout(function(){if(!document.hidden&&document.hasFocus())s.className='';},60);}
-  addEventListener('blur',on);addEventListener('pagehide',on);addEventListener('freeze',on);
-  document.addEventListener('visibilitychange',function(){document.hidden?on():off();});
-  addEventListener('focus',off);addEventListener('pageshow',off);
-})();
-</script>
 <div id="gate"><div class="spin"></div><div class="sub">載入中…</div></div>
 <div id="lock"></div>
 
@@ -461,7 +453,7 @@ function nextOccur(s,t){
 }
 function vHome(){
   const t=today(),d=parse(t),sps=spOn(t);
-  let h='<div class="hero"><div class="deco">🌭🙊</div><div class="sub">'+d.getFullYear()+' 年 · 週'+WD[d.getDay()]+'</div><h1>'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</h1>'+
+  let h='<div class="hero"><div class="deco" data-act="hide">🌭🙊</div><div class="sub">'+d.getFullYear()+' 年 · 週'+WD[d.getDay()]+'</div><h1>'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</h1>'+
     '<div class="prow"><div class="pair">'+esc(S.settings.a)+' 💞 '+esc(S.settings.b)+'</div><i class="pdot" id="pdot"></i><span class="ptxt" id="ptxt"></span></div><div class="spark">✨</div></div>';
   sps.forEach(s=>{
     const n=s.yearly&&!s.bday?(+t.slice(0,4))-(+s.date.slice(0,4)):0;
@@ -722,6 +714,10 @@ function vSet(){
     '<label class="sw2" style="margin:0"><span class="grow" style="color:var(--ink);font-size:15px">被戳時顯示彈跳動畫<div class="sub" style="font-size:12px">對方戳的符號會在畫面上小小彈跳；關掉的話，只會在卡片上顯示「戳了你幾下」</div></span><input type="checkbox" id="pkNotify"'+(pokeOpt('notify')?' checked':'')+'></label>'+
     '<label class="sw2" style="margin:0"><span class="grow" style="color:var(--ink);font-size:15px">被戳時震動<div class="sub" style="font-size:12px">Android 手機才有效，iPhone 不支援網頁震動</div></span><input type="checkbox" id="pkVibe"'+(pokeOpt('vibe')?' checked':'')+'></label>'+
     '<div class="note" style="margin-top:8px">只套用在這支手機。App 關著時不會跳通知，下次打開才會看到。</div></div>';
+  const idl=idleSec();
+  h+='<h2>🙈 隱藏</h2><div class="card"><div class="note" style="color:var(--ink)">離開 App 前，按右下角的 🙈（或首頁上方的 🌭🙊），畫面會馬上變回跑馬燈，多工畫面就看不到內容。</div>'+
+    '<label>多久沒碰畫面，自動回到跑馬燈</label><div class="pkpick" style="flex-wrap:wrap">'+IDLE_OPTS.map(([v,n])=>'<button class="pk" style="width:auto;padding:0 14px;font-size:14px;border-radius:99px'+(v===idl?'':'')+'" data-act="idle" data-v="'+v+'"'+(v===idl?' data-on="1"':'')+'>'+n+'</button>').join('')+'</div>'+
+    '<div class="note" style="margin-top:8px">只套用在這支手機。打字、捲動、點畫面都算有在使用。</div></div>';
   h+='<h2>🔐 這支手機的密碼鎖</h2><div class="card"><div class="note">每次打開 App 都需要輸入密碼。密碼只存在這支手機，兩人各自設定。</div>'+
     '<div class="btns"><button class="btn ghost" data-act="set-pin">變更密碼</button></div></div>';
   h+='<h2>💾 備份</h2><div class="card"><div class="note">資料存在雲端，兩人即時同步，只有你們兩個 Google 帳號能讀寫。也可以匯出一份備份檔自己保存；匯入會把備份檔內容合併進雲端（雲端已有的不會被覆蓋）。</div>'+
@@ -1031,21 +1027,16 @@ document.addEventListener('focusout',()=>setTimeout(()=>{if(!isTyping(document.a
 const pokeOpt=k=>lsGet('ourdays.poke.'+k)!=='0';
 const partner=()=>me==='a'?'b':'a';
 const myPokes=()=>S.pokes.filter(x=>x.to===me);
-const POKE_EMOJIS=['👉','😘','💋','🤗','🫶','🥰','😈','🔥','🍑','🐻','🐰','🌭','🙊','🍗','🍉'];
-const pokeEmoji=()=>lsGet('ourdays.poke.emoji')||'👉';
+const POKE_EMOJIS=['👉','😘','💋','🤗','🫶','🥰','😈','🔥','🍑','🌭','🙊','🍗','🍉','😴','🤔','🙄','😋','🫪','😜','😡','😭'];
+const pokeEmoji=()=>{const v=lsGet('ourdays.poke.emoji');return POKE_EMOJIS.includes(v)?v:'👉';};
 function pokeCard(){
   const ot=partner(),lg=S.pokeLog[today()]||{},n=myPokes().length,cur=pokeEmoji();
-  const list=POKE_EMOJIS.includes(cur)?POKE_EMOJIS:[cur].concat(POKE_EMOJIS);
+  const list=POKE_EMOJIS;
   return '<div class="card pokecard" style="margin-top:2px"><button class="pokebtn" data-act="poke" aria-label="戳一下">'+esc(cur)+'</button>'+
     '<div class="grow"><div class="tt">戳一下'+esc(S.settings[ot])+'</div>'+
     '<div class="sub">今天你戳了 '+(lg[me]||0)+' 下 · '+esc(S.settings[ot])+'戳了你 '+(lg[ot]||0)+' 下</div>'+
     (n&&!pokeOpt('notify')?'<button class="pokenew" data-act="poke-seen">'+emj(ot)+' 戳了你 '+n+' 下・知道了</button>':'')+
-    '<div class="pkpick">'+list.map(e=>'<button class="pk'+(e===cur?' on':'')+'" data-act="pk-pick" data-v="'+esc(e)+'">'+esc(e)+'</button>').join('')+
-    '<button class="pk" data-act="pk-custom" aria-label="自訂符號">✏️</button></div></div></div>';
-}
-function pokeCustom(){
-  openSheet('自訂戳戳符號','<label>輸入一個 emoji 或符號</label><input id="f-pk" maxlength="8" value="'+esc(pokeEmoji())+'" style="font-size:28px;text-align:center;max-width:140px">',
-    {save(){const v=val('f-pk');if(!v)return toast('請輸入符號');lsSet('ourdays.poke.emoji',v);toast('之後就用 '+v+' 戳');return true;}});
+    '<div class="pkpick">'+list.map(e=>'<button class="pk'+(e===cur?' on':'')+'" data-act="pk-pick" data-v="'+esc(e)+'">'+esc(e)+'</button>').join('')+'</div></div></div>';
 }
 let lastPoke=0;
 function doPoke(btn){
@@ -1102,6 +1093,25 @@ function presPaint(){
 setInterval(presPaint,15e3);
 addEventListener('pagehide',()=>presWrite(false));
 
+/* ---------- 🙈 隱藏：一鍵回到跑馬燈；閒置自動回到跑馬燈 ---------- */
+const IDLE_OPTS=[[0,'不自動'],[30,'30 秒'],[60,'1 分鐘'],[180,'3 分鐘'],[300,'5 分鐘']];
+const idleSec=()=>{const v=lsGet('ourdays.idle');return v==null?60:(+v||0);};
+function hideNow(){
+  if(!getPin())return;
+  presWrite(false);
+  $('mask').classList.remove('on');sheetCb=null;sheetDay=null;
+  document.activeElement&&document.activeElement.blur&&document.activeElement.blur();
+  showLock('decoy');
+}
+let lastAct=Date.now();
+['pointerdown','keydown','input','wheel','touchmove'].forEach(t=>document.addEventListener(t,()=>{lastAct=Date.now();},{passive:true,capture:true}));
+document.addEventListener('scroll',()=>{lastAct=Date.now();},{passive:true,capture:true});
+setInterval(()=>{
+  const sec=idleSec();
+  if(!sec||!me||!started||document.hidden||$('lock').classList.contains('on'))return;
+  if(Date.now()-lastAct>sec*1000)hideNow();
+},3000);
+
 /* ---------- 事件 ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
 let delArmed=false,delMsg='',delAt=0;
@@ -1149,7 +1159,6 @@ document.addEventListener('click',e=>{
     case 'poke':doPoke(el);break;
     case 'poke-seen':pokesSeen();break;
     case 'pk-pick':lsSet('ourdays.poke.emoji',el.dataset.v);render();break;
-    case 'pk-custom':pokeCustom();break;
     case 'theme':themeSet(el.dataset.v);render();break;
     case 'st-next':statY++;render();break;
     case 'set-pin':pinForm();break;
@@ -1169,6 +1178,8 @@ document.addEventListener('click',e=>{
       else{delArmed=false;sheetCb.del();toast('已刪除');closeSheet();}
       break;
     case 'unlock':unlock();break;
+    case 'hide':hideNow();break;
+    case 'idle':lsSet('ourdays.idle',String(+el.dataset.v));toast(+el.dataset.v?'已設定':'已關閉自動隱藏');render();break;
     case 'pin-setup':pinSetup();break;
     case 'mq-set':$('mqPanel').classList.toggle('on');break;
     case 'mq-login':$('mqLogin').style.display='block';$('pinIn').focus();break;
@@ -1242,7 +1253,7 @@ function showLock(mode){
     '<div class="sub">請輸入密碼</div>'+pinInput('pinIn','')+'<button class="btn" data-act="unlock">解鎖</button>');
   $('lock').classList.add('on');
 }
-function hideLock(){$('lock').classList.remove('mq');$('lock').style.background='';lockMode='';$('lock').classList.remove('on');$('lock').innerHTML='';render();checkPokes();presBeat();}
+function hideLock(){$('lock').classList.remove('mq');$('lock').style.background='';lockMode='';$('lock').classList.remove('on');$('lock').innerHTML='';lastAct=Date.now();render();checkPokes();presBeat();}
 function pinSetup(){
   const p=$('pin1').value.trim();
   if(!/^\d{4,8}$/.test(p))return toast('請輸入 4–8 位數字');
@@ -1292,7 +1303,7 @@ function gate(state,msg){
 /* ---------- Firebase 連線 ---------- */
 const LISTENERS=12;
 let unsubs=[],got=new Set(),started=false;
-function stopListen(){if(presTimer){clearInterval(presTimer);presTimer=null;}if(me)presWrite(false);unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
+function stopListen(){document.body.classList.remove('app');if(presTimer){clearInterval(presTimer);presTimer=null;}if(me)presWrite(false);unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
 function onErr(e){
   console.error(e);
   if(e.code==='permission-denied'){stopListen();gate('denied');}
@@ -1301,7 +1312,7 @@ function onErr(e){
 function changed(n){
   got.add(n);
   if(got.size<LISTENERS)return;
-  if(!started){started=true;gate('off');render();archiveDue();checkPokes();presStart();return;}
+  if(!started){started=true;document.body.classList.add('app');lastAct=Date.now();gate('off');render();archiveDue();checkPokes();presStart();return;}
   if(n==='presence'){presPaint();return;}
   if(n==='pokes')checkPokes();
   refresh();

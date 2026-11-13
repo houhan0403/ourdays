@@ -63,7 +63,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .hero .sub{color:#fff;opacity:.9}
 .hero h1{font-size:34px}
 .hero .prow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
-.hero .pdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:1px;background:#b9b2b6;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.hero .pdot{display:inline-block;flex:none;width:11px;height:11px;border-radius:50%;margin-left:4px;margin-right:-2px;background:#b9b2b6;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
 .hero .pdot.on{background:#34d564;box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 8px #34d564;animation:pulse 2s ease-in-out infinite}
 .hero .ptxt{font-size:12px;opacity:.92}
 @keyframes pulse{50%{box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px 3px #34d564}}
@@ -446,7 +446,7 @@ function nextOccur(s,t){
 function vHome(){
   const t=today(),d=parse(t),sps=spOn(t);
   let h='<div class="hero"><div class="deco">🌭🙊</div><div class="sub">'+d.getFullYear()+' 年 · 週'+WD[d.getDay()]+'</div><h1>'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</h1>'+
-    '<div class="prow"><div class="pair">'+esc(S.settings.a)+' 💞 '+esc(S.settings.b)+'<i class="pdot" id="pdot"></i></div><span class="ptxt" id="ptxt"></span></div><div class="spark">✨</div></div>';
+    '<div class="prow"><div class="pair">'+esc(S.settings.a)+' 💞 '+esc(S.settings.b)+'</div><i class="pdot" id="pdot"></i><span class="ptxt" id="ptxt"></span></div><div class="spark">✨</div></div>';
   sps.forEach(s=>{
     const n=s.yearly&&!s.bday?(+t.slice(0,4))-(+s.date.slice(0,4)):0;
     h+='<div class="banner"><b>🎉 今天是「'+esc(s.name)+'」'+(n>0?' · 滿 '+n+' 年':'')+'</b><span>'+(s.bday?'生日快樂！今天很適合安排一段只屬於兩人的親密時光。':'特別的日子，很適合安排一段只屬於兩人的親密時光。')+'</span></div>';

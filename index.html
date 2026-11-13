@@ -62,6 +62,11 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;paddin
 .hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:26px;padding:20px 20px 18px;margin-bottom:12px;box-shadow:var(--shadow)}
 .hero .sub{color:#fff;opacity:.9}
 .hero h1{font-size:34px}
+.hero .prow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.hero .pdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px;vertical-align:1px;background:#b9b2b6;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.hero .pdot.on{background:#34d564;box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 8px #34d564;animation:pulse 2s ease-in-out infinite}
+.hero .ptxt{font-size:12px;opacity:.92}
+@keyframes pulse{50%{box-shadow:0 0 0 2px rgba(255,255,255,.85),0 0 14px 3px #34d564}}
 .hero .pair{display:inline-block;margin-top:8px;background:rgba(255,255,255,.25);border-radius:99px;padding:4px 14px;font-size:14px;font-weight:600}
 .hero .deco{position:absolute;right:14px;top:14px;font-size:38px;letter-spacing:-6px;line-height:1}
 .hero .spark{position:absolute;right:22px;bottom:12px;font-size:18px;opacity:.9}
@@ -248,7 +253,7 @@ const FB='https://www.gstatic.com/firebasejs/10.12.2/';
    msgs（有話要說）: 每則留言一筆 {date,by,text,ts}
    journal（心情小記）: 每天一筆 {a:{text,mood,ts,hist}, b:{...}}，各自只寫自己那欄
    history（歷史紀錄）: 每天一筆 {date,text,ts}，凌晨 3 點後自動產生前一天的文字 */
-const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:'',emja:'🍗',emjb:'🍉',histClr:''},records:[],bookings:[],specials:[],msgs:[],fun:[],pokes:[],pokeLog:{},journal:{},history:{}});
+const def=()=>({settings:{a:'老公',b:'老婆',bda:'',bdb:'',wed:'',dat:'',emja:'🍗',emjb:'🍉',histClr:''},records:[],bookings:[],specials:[],msgs:[],fun:[],pokes:[],pokeLog:{},presence:{},journal:{},history:{}});
 let S=def();
 let me=null,myEmail='';           // me = 'a' | 'b'，由 Google 登入的帳號決定
 let db=null,auth=null,F=null,A=null;
@@ -358,6 +363,7 @@ function render(){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
   fitChats();
   if(tab==='hist')histFill();
+  presPaint();
 }
 /* 重畫目前畫面；當日視窗開著時一併更新並保留捲動位置與「有話要說」打到一半的字 */
 function redraw(){
@@ -440,7 +446,7 @@ function nextOccur(s,t){
 function vHome(){
   const t=today(),d=parse(t),sps=spOn(t);
   let h='<div class="hero"><div class="deco">🌭🙊</div><div class="sub">'+d.getFullYear()+' 年 · 週'+WD[d.getDay()]+'</div><h1>'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日</h1>'+
-    '<div class="pair">'+esc(S.settings.a)+' 💞 '+esc(S.settings.b)+'</div><div class="spark">✨</div></div>';
+    '<div class="prow"><div class="pair">'+esc(S.settings.a)+' 💞 '+esc(S.settings.b)+'<i class="pdot" id="pdot"></i></div><span class="ptxt" id="ptxt"></span></div><div class="spark">✨</div></div>';
   sps.forEach(s=>{
     const n=s.yearly&&!s.bday?(+t.slice(0,4))-(+s.date.slice(0,4)):0;
     h+='<div class="banner"><b>🎉 今天是「'+esc(s.name)+'」'+(n>0?' · 滿 '+n+' 年':'')+'</b><span>'+(s.bday?'生日快樂！今天很適合安排一段只屬於兩人的親密時光。':'特別的日子，很適合安排一段只屬於兩人的親密時光。')+'</span></div>';
@@ -1060,6 +1066,26 @@ function checkPokes(){
   setTimeout(()=>{pokeBusy=false;checkPokes();},800);
 }
 
+/* ---------- 對方在不在線上 ----------
+   App 開著（而且已經解鎖）時，每 45 秒更新一次 presence/{a|b}；離開 App 時標記離線。
+   超過 2 分鐘沒更新也視為離線（例如手機直接被關掉）。 */
+const PRES_TTL=120e3;
+let presTimer=null;
+const appActive=()=>!!me&&started&&!document.hidden&&!$('lock').classList.contains('on');
+let presOn=false;   // 只有真的標記過「在線上」，離開時才寫離線（停在偽裝畫面不會留下上線紀錄）
+function presWrite(on){if(!db||!me)return;if(!on&&!presOn)return;presOn=!!on;F.setDoc(dref('presence',me),{on:!!on,ts:Date.now()}).catch(()=>{});}
+function presBeat(){if(appActive())presWrite(true);}
+function presStart(){if(presTimer)clearInterval(presTimer);presBeat();presTimer=setInterval(()=>{presBeat();presPaint();},45e3);}
+function presAgo(ts){const m=Math.floor((Date.now()-ts)/60e3);return m<1?'剛剛':m<60?m+' 分鐘前':m<1440?Math.floor(m/60)+' 小時前':Math.floor(m/1440)+' 天前';}
+function presPaint(){
+  const dot=$('pdot'),txt=$('ptxt');if(!dot||!me)return;
+  const ot=partner(),p=S.presence[ot],on=!!(p&&p.on&&Date.now()-(p.ts||0)<PRES_TTL);
+  dot.classList.toggle('on',on);
+  txt.textContent=on?S.settings[ot]+' 在線上':p&&p.ts?S.settings[ot]+' '+presAgo(p.ts)+'上線':'';
+}
+setInterval(presPaint,15e3);
+addEventListener('pagehide',()=>presWrite(false));
+
 /* ---------- 事件 ---------- */
 const find=(arr,id)=>arr.find(x=>x.id===id);
 let delArmed=false,delMsg='',delAt=0;
@@ -1200,7 +1226,7 @@ function showLock(mode){
     '<div class="sub">請輸入密碼</div>'+pinInput('pinIn','')+'<button class="btn" data-act="unlock">解鎖</button>');
   $('lock').classList.add('on');
 }
-function hideLock(){$('lock').classList.remove('mq');$('lock').style.background='';lockMode='';$('lock').classList.remove('on');$('lock').innerHTML='';render();checkPokes();}
+function hideLock(){$('lock').classList.remove('mq');$('lock').style.background='';lockMode='';$('lock').classList.remove('on');$('lock').innerHTML='';render();checkPokes();presBeat();}
 function pinSetup(){
   const p=$('pin1').value.trim();
   if(!/^\d{4,8}$/.test(p))return toast('請輸入 4–8 位數字');
@@ -1221,7 +1247,7 @@ function lockIfNeeded(){
   if(lockMode!=='decoy')showLock('decoy');
 }
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden)lockIfNeeded();
+  if(document.hidden){lockIfNeeded();presWrite(false);}
   else{archiveDue();if(me&&started&&!$('mask').classList.contains('on'))render();checkPokes();}
 });
 const setOffline=()=>$('offline').classList.toggle('on',!navigator.onLine);
@@ -1248,9 +1274,9 @@ function gate(state,msg){
 }
 
 /* ---------- Firebase 連線 ---------- */
-const LISTENERS=11;
+const LISTENERS=12;
 let unsubs=[],got=new Set(),started=false;
-function stopListen(){unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
+function stopListen(){if(presTimer){clearInterval(presTimer);presTimer=null;}if(me)presWrite(false);unsubs.forEach(u=>u());unsubs=[];got=new Set();started=false;S=def();}
 function onErr(e){
   console.error(e);
   if(e.code==='permission-denied'){stopListen();gate('denied');}
@@ -1259,7 +1285,8 @@ function onErr(e){
 function changed(n){
   got.add(n);
   if(got.size<LISTENERS)return;
-  if(!started){started=true;gate('off');render();archiveDue();checkPokes();return;}
+  if(!started){started=true;gate('off');render();archiveDue();checkPokes();presStart();return;}
+  if(n==='presence'){presPaint();return;}
   if(n==='pokes')checkPokes();
   refresh();
 }
@@ -1272,6 +1299,7 @@ function listen(){
   unsubs.push(F.onSnapshot(col('history'),snap=>{
     const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.history=o;changed('history');},onErr));
   unsubs.push(F.onSnapshot(col('diary'),snap=>{convertLegacyDiary(snap.docs);changed('diary');},onErr));
+  unsubs.push(F.onSnapshot(col('presence'),snap=>{const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.presence=o;changed('presence');},onErr));
   unsubs.push(F.onSnapshot(col('pokes'),snap=>{S.pokes=snap.docs.map(d=>({...d.data(),id:d.id}));changed('pokes');},onErr));
   unsubs.push(F.onSnapshot(F.query(col('pokeLog'),F.where(F.documentId(),'>=',fmt(addDays(new Date(),-1)))),snap=>{
     const o={};snap.docs.forEach(d=>{o[d.id]=d.data();});S.pokeLog=o;changed('pokeLog');},onErr));

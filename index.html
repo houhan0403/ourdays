@@ -76,6 +76,8 @@ nav button{flex:1;padding:6px 0;font-size:11px;color:var(--mute);display:flex;fl
 nav{border-radius:24px 24px 0 0;box-shadow:0 -4px 18px var(--navsh);transform:translateZ(0);transition:transform .2s}
 body.kb nav{transform:translateY(130%)}
 .funin{margin-top:12px}
+.reclist{max-height:330px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;margin-right:-6px;padding-right:6px}
+.reclist .item:last-child{border-bottom:0}
 .funrow{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left}
 .funrow .t{white-space:pre-wrap;word-break:break-word}
 .themes{display:flex;flex-wrap:wrap;gap:12px}
@@ -277,6 +279,9 @@ const jOn=ds=>S.journal[ds]||{};
 const jHas=(ds,k)=>{const e=jOn(ds)[k];return !!(e&&(e.text||'').trim());};
 const jDay=ds=>jHas(ds,'a')||jHas(ds,'b');
 const hasDiary=ds=>msgsOn(ds).length>0||jDay(ds)||funOn(ds).length>0;
+/* 有話要說、共同日記：過了隔天凌晨 3 點（歷史紀錄匯出後）就鎖住，只能看不能新增或修改 */
+const lockedDay=ds=>ds<fmt(new Date(Date.now()-3*3600e3));
+const LOCK_NOTE='<div class="sub" style="font-size:12px;text-align:center;margin-top:10px">🔒 已過隔天凌晨 3 點，只能看不能新增或修改</div>';
 const MOODS=['🥰','😊','😌','🤤','😴','😢','😠','🤒'];
 const stamp=ts=>{const d=new Date(ts);return (d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
 function journalHtml(ds){
@@ -287,10 +292,10 @@ function journalHtml(ds){
       (e&&e.ts?'<button class="btn sm plain" data-act="j-hist" data-d="'+ds+'" data-k="'+k+'">🕘 履歷</button>':'')+'</div>'+
       (has?'<div class="note" style="color:var(--ink);margin-top:6px">'+esc(e.text)+'</div>'+
           '<div class="sub" style="font-size:12px;margin-top:4px">'+(n?'最後修改 ':'寫於 ')+stamp(e.ts)+(n?' · 已修改 '+n+' 次':'')+'</div>'
-          :'<div class="sub" style="margin-top:6px">'+(e&&e.ts?'已清空（'+stamp(e.ts)+'）':mine?'今天還沒寫':'對方還沒寫')+'</div>')+
-      (mine?'<div class="btns"><button class="btn ghost" data-act="j-edit" data-d="'+ds+'">'+(has?'✏️ 修改我的日記':'✏️ 寫給'+esc(S.settings[ot])+'的心情小記')+'</button></div>':'')+'</div>';
+          :'<div class="sub" style="margin-top:6px">'+(e&&e.ts?'已清空（'+stamp(e.ts)+'）':lockedDay(ds)?'沒有寫':mine?'今天還沒寫':'對方還沒寫')+'</div>')+
+      (mine&&!lockedDay(ds)?'<div class="btns"><button class="btn ghost" data-act="j-edit" data-d="'+ds+'">'+(has?'✏️ 修改我的日記':'✏️ 寫給'+esc(S.settings[ot])+'的心情小記')+'</button></div>':'')+'</div>';
   };
-  return '<h2>📖 共同日記</h2><div class="card">'+entry(me,true)+entry(ot,false)+'</div>';
+  return '<h2>📖 共同日記</h2><div class="card">'+entry(me,true)+entry(ot,false)+(lockedDay(ds)?LOCK_NOTE:'')+'</div>';
 }
 function msgTime(ts,ds){
   if(!ts)return '';
@@ -301,9 +306,9 @@ function chatHtml(ds){
   return '<div class="chat">'+msgsOn(ds).map(m=>{
     const mine=m.by===me;
     return '<div class="mi">'+(mine?'':'<div class="who">'+esc(S.settings[m.by]||'')+'</div>')+
-      '<div class="msg'+(mine?' me':'')+'"><div class="bub"'+(mine?' data-mid="'+esc(m.id)+'"':'')+'>'+esc(m.text)+'</div>'+
+      '<div class="msg'+(mine?' me':'')+'"><div class="bub"'+(mine&&!lockedDay(ds)?' data-mid="'+esc(m.id)+'"':'')+'>'+esc(m.text)+'</div>'+
       '<time>'+msgTime(m.ts,ds)+(m.edited?'<br>已編輯':'')+'</time></div></div>';
-  }).join('')+'</div>'+(msgsOn(ds).some(m=>m.by===me)?'<div class="chathint">長按自己的留言可以編輯或刪除</div>':'');
+  }).join('')+'</div>'+(!lockedDay(ds)&&msgsOn(ds).some(m=>m.by===me)?'<div class="chathint">長按自己的留言可以編輯或刪除</div>':'');
 }
 /* 「有話要說」的視窗最多顯示最新 8 則的高度，更早的往上捲動查看 */
 const CHAT_MAX=8;
@@ -368,9 +373,9 @@ function funHtml(ds){
 function chatSection(ds){
   const ms=msgsOn(ds);
   return '<h2>💬 有話要說</h2><div class="card">'+
-    (ms.length?(ms.length>CHAT_MAX?'<div class="chatmore">↑ 往上捲動看更早的留言（共 '+ms.length+' 則）</div>':'')+chatHtml(ds):'<div class="empty"><b>💬</b>這天還沒有留言，寫下第一句吧</div>')+
-    '<div class="chatin"><textarea rows="1" maxlength="2000" placeholder="寫點什麼…" data-d="'+ds+'"></textarea>'+
-    '<button class="btn" data-act="chat-send" data-d="'+ds+'">送出</button></div></div>';
+    (ms.length?(ms.length>CHAT_MAX?'<div class="chatmore">↑ 往上捲動看更早的留言（共 '+ms.length+' 則）</div>':'')+chatHtml(ds):'<div class="empty"><b>💬</b>'+(lockedDay(ds)?'這天沒有留言':'這天還沒有留言，寫下第一句吧')+'</div>')+
+    (lockedDay(ds)?LOCK_NOTE:'<div class="chatin"><textarea rows="1" maxlength="2000" placeholder="寫點什麼…" data-d="'+ds+'"></textarea>'+
+    '<button class="btn" data-act="chat-send" data-d="'+ds+'">送出</button></div>')+'</div>';
 }
 function bookingHtml(ds){
   const bks=bksOn(ds);
@@ -417,7 +422,12 @@ function vHome(){
     const n=s.yearly&&!s.bday?(+t.slice(0,4))-(+s.date.slice(0,4)):0;
     h+='<div class="banner"><b>🎉 今天是「'+esc(s.name)+'」'+(n>0?' · 滿 '+n+' 年':'')+'</b><span>'+(s.bday?'生日快樂！今天很適合安排一段只屬於兩人的親密時光。':'特別的日子，很適合安排一段只屬於兩人的親密時光。')+'</span></div>';
   });
-  h+=dayDetail(t)+onThisDay(t);
+  h+=dayDetail(t);
+  return h;
+}
+/* 即將到來（行事曆頁） */
+function upcomingHtml(){
+  const t=today(),d=parse(t);let h='';
   const lim=fmt(addDays(d,60)),up=[];
   allSpecials().forEach(s=>{const n=nextOccur(s,t);if(n&&n>t&&n<=lim)up.push({d:n,t:s.name,k:'sp'});});
   S.bookings.forEach(b=>{if(b.date>t)up.push({d:b.date,t:(b.time?b.time+' ':'')+(b.note||'兩人時光'),k:'bk'});});
@@ -441,13 +451,13 @@ function vCal(){
   for(let i=0;i<lead;i++)h+='<div></div>';
   for(let n=1;n<=dim;n++){
     const ds=calY+'-'+pad(calM+1)+'-'+pad(n);
-    const dots=(bksOn(ds).length?'<i class="em">💌</i>':'')+
+    const dots=(recsOn(ds).length?'<i class="em">😈</i>':'')+(bksOn(ds).length?'<i class="em">💌</i>':'')+
       (spOn(ds).length?'<i class="em">⭐</i>':'')+(hasDiary(ds)?'<i class="em">📝</i>':'');
     h+='<button class="day'+(ds===t?' today':'')+(ds===sel?' sel':'')+'" data-act="pick-day" data-d="'+ds+'">'+n+'<span class="dots">'+dots+'</span></button>';
   }
-  h+='</div><div class="legend"><span>💌 預約</span><span>⭐ 特別日</span><span>📝 趣事／留言／日記</span></div></div>';
-  h+='<div class="sub" style="text-align:center;margin-top:12px">點任一天，可查看當天的趣事、留言、日記與預約</div>';
-  return h;
+  h+='</div><div class="legend"><span>😈 壞壞紀錄</span><span>💌 預約</span><span>⭐ 特別日</span><span>📝 趣事／留言／日記</span></div></div>';
+  h+='<div class="sub" style="text-align:center;margin:12px 0 4px">點任一天，可查看當天的趣事、留言、日記與預約</div>';
+  return h+onThisDay(t)+upcomingHtml();
 }
 /* 點日期後跳出的當日視窗 */
 let sheetDay=null;
@@ -456,6 +466,9 @@ function showDay(ds){
   let h='<div class="row" style="margin-bottom:4px"><h3 class="grow" style="margin:0">'+nice(ds)+(ds===today()?'（今天）':'')+'</h3>'+
     '<button class="btn sm plain" data-act="sheet-close">關閉</button></div>';
   spOn(ds).forEach(s=>{h+='<div class="card" style="margin-top:10px"><span class="tag" style="background:var(--plum);color:#fff">⭐ 特別日</span> <b>'+esc(s.name)+'</b></div>';});
+  const rs=recsOn(ds);
+  if(rs.length)h+='<div class="card" style="margin-top:10px"><div class="row"><span style="font-size:20px">😈</span><div class="grow"><b>壞壞紀錄 '+rs.length+' 次</b>'+
+    (rs.some(r=>r.dur)?'<span class="sub"> · 共 '+rs.reduce((a,r)=>a+(+r.dur||0),0)+' 分鐘</span>':'')+'</div></div></div>';
   $('sheet').innerHTML=h+dayDetail(ds)+onThisDay(ds);
   $('mask').classList.add('on');
   fitChats();
@@ -470,11 +483,12 @@ function rangeStat(a,b){
 function recMonthHtml(){
   const ym=recY+'-'+pad(recM+1),list=S.records.filter(r=>(r.date||'').slice(0,7)===ym).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
   let h='<div class="calhead" style="margin-top:14px"><button data-act="rec-prev" aria-label="上個月">‹</button><b>💗 '+recY+' 年 '+(recM+1)+' 月的紀錄</b><button data-act="rec-next" aria-label="下個月">›</button></div><div class="card">';
-  h+=list.length?list.map(r=>{const d=parse(r.date);
+  h+=list.length?'<div class="reclist">'+list.map(r=>{const d=parse(r.date);
     return '<div class="item"><button class="row" style="width:100%;text-align:left" data-act="edit-rec" data-id="'+r.id+'">'+
     '<span class="tag">'+(d.getMonth()+1)+'/'+d.getDate()+' 週'+WD[d.getDay()]+'</span><div class="grow"><b>'+(r.dur?r.dur+' 分鐘':'未記錄時間長度')+'</b>'+
     (r.by?'<span class="sub"> · '+esc(S.settings[r.by])+'新增</span>':'')+
-    (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><span class="sub">'+(mineRec(r)?'›':'🔒')+'</span></button></div>';}).join('')
+    (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><span class="sub">'+(mineRec(r)?'›':'🔒')+'</span></button></div>';}).join('')+'</div>'+
+    (list.length>5?'<div class="chatmore" style="margin:8px 0 0">共 '+list.length+' 筆，可在框內上下捲動</div>':'')
     :'<div class="empty"><b>🌱</b>這個月還沒有紀錄</div>';
   return h+'<div class="btns"><button class="btn" data-act="add-rec" data-d="'+today()+'">💗 新增紀錄</button></div></div>';
 }
@@ -521,6 +535,7 @@ function dayText(ds){
   if(js.length){lines.push('<日記>');js.forEach(k=>lines.push(emj(k)+'：'+jOn(ds)[k].text.trim()));}
   return lines.join('\n');
 }
+const lastTouch=ds=>Math.max(0,...funOn(ds).map(f=>Math.max(f.ts||0,f.edited||0)),...msgsOn(ds).map(m=>Math.max(m.ts||0,m.edited||0)),...['a','b'].map(k=>(jOn(ds)[k]||{}).ts||0));
 let archBusy=false;
 async function archiveDue(){
   if(archBusy||!started||!me||!db)return;
@@ -531,7 +546,7 @@ async function archiveDue(){
     if(!DATE_RE.test(ds)||ds>cut)return;
     if(S.settings.histClr&&ds<=S.settings.histClr)return;   // 已清除過的日子不再產生
     const ex=S.history[ds];
-    if(ex&&ds<recent)return;
+    if(ex&&ds<recent&&lastTouch(ds)<=(ex.ts||0))return;   // 舊日子：之後有補寫趣事才重新匯出
     const t=dayText(ds);
     if(t&&(!ex||ex.text!==t))ops.push([ds,t]);
   });
@@ -740,6 +755,7 @@ function spForm(s,isNew){
 }
 let jMood='';
 function jForm(ds){
+  if(lockedDay(ds))return toast('🔒 這天的日記已鎖定');
   const ot=me==='a'?'b':'a',cur=jOn(ds)[me]||{};
   jMood=jHas(ds,me)?(cur.mood||''):'';
   openSheet('給'+esc(S.settings[ot])+'的心情小記 · '+nice(ds),
@@ -750,6 +766,7 @@ function jForm(ds){
      del:jHas(ds,me)?()=>{jSave(ds,'','');}:null});
 }
 function jSave(ds,text,mood){
+  if(lockedDay(ds))return toast('🔒 這天的日記已鎖定');
   const cur=jOn(ds)[me]||{};
   if(!text&&!cur.ts)return toast('請寫點內容');
   if(!text)mood='';
@@ -883,7 +900,7 @@ document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closes
 document.addEventListener('click',e=>{if(lpEat){lpEat=false;if(Date.now()-lpFired<1500){e.stopPropagation();e.preventDefault();}}},true);
 function msgSheet(html){sheetCb={};$('sheet').innerHTML=html;$('sheet').scrollTop=0;$('mask').classList.add('on');}
 function msgMenu(id){
-  const m=S.msgs.find(x=>x.id===id);if(!m||m.by!==me)return;
+  const m=S.msgs.find(x=>x.id===id);if(!m||m.by!==me||lockedDay(m.date))return;
   msgSheet('<h3>我的留言</h3><div class="preview">'+esc(m.text)+'</div><div class="sub" style="text-align:right;margin-bottom:6px">'+msgTime(m.ts,m.date)+'</div>'+
     '<div class="btns"><button class="btn ghost" data-act="msg-edit" data-id="'+esc(id)+'">✏️ 編輯</button>'+
     '<button class="btn ghost" style="color:#c9364f" data-act="msg-del-ask" data-id="'+esc(id)+'">🗑️ 刪除</button></div>'+
@@ -902,6 +919,7 @@ function msgEdit(id){
     {save(){
       const t=val('f-msg');
       if(!t)return toast('留言不能是空的；要刪除請長按留言選「刪除」');
+      if(lockedDay(m.date))return toast('🔒 這天的留言已鎖定');
       if(t===m.text)return true;
       w(F.setDoc(dref('msgs',id),{text:t,edited:Date.now()},{merge:true}));
       toast('已更新');return true;
@@ -979,13 +997,14 @@ document.addEventListener('click',e=>{
     case 'chat-send':{
       const ta=el.closest('.chatin').querySelector('textarea'),t=ta.value.trim();
       if(!t)break;
+      if(lockedDay(d)){toast('🔒 這天的留言已鎖定');redraw();break;}
       ta.value='';ta.style.height='44px';
       const mid=uid(),last=msgsOn(d).reduce((x,m)=>Math.max(x,m.ts||0),0);
       w(F.setDoc(dref('msgs',mid),{date:d,by:me,text:t,ts:Math.max(Date.now(),last+1)}));
       break;}
     case 'msg-edit':msgEdit(id);break;
     case 'msg-del-ask':msgDelAsk(id);break;
-    case 'msg-del-ok':{const m=S.msgs.find(x=>x.id===id);if(m&&m.by===me){remove('msgs',id);toast('已刪除');}closeSheet();break;}
+    case 'msg-del-ok':{const m=S.msgs.find(x=>x.id===id);if(m&&m.by===me&&!lockedDay(m.date)){remove('msgs',id);toast('已刪除');}closeSheet();break;}
     case 'add-sp':spForm({id:uid(),yearly:true},true);break;
     case 'edit-sp':{const s=find(S.specials,id);if(s)spForm({...s},false);break;}
     case 'pick-day':sel=d;if(el.dataset.go){tab='cal';const s=parse(d);calY=s.getFullYear();calM=s.getMonth();SC().scrollTop=0;}render();showDay(d);break;
